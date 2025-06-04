@@ -24,6 +24,14 @@
       "passConfig": true,
       "environments": [ "preview", "live", "edit" ],
       "includePaths": ["**.docx**"]
+    },
+    {
+      "id": "request-approval",
+      "title": "Request for Approval",
+      "url": "https://experience.adobe.com/aem/generate-variations",
+      "passConfig": true,
+      "environments": [ "preview" ],
+      "includePaths": ["**.docx**"]
     }
   ]
 }
