@@ -26,12 +26,14 @@
       "includePaths": ["**.docx**"]
     },
     {
-      "id": "request-approval",
-      "title": "Request for Approval",
-      "url": "https://experience.adobe.com/aem/generate-variations",
-      "passConfig": true,
+      "id": "submit-approval",
+      "title": "承認依頼",
       "environments": [ "preview" ],
-      "includePaths": ["**.docx**"]
+      "url": "https://your.webhook.url/for/approval",
+      "includePaths": [ "**.docx**" ],
+      "passConfig": false,
+      "submit": true,
+      "confirmation": "承認依頼をWorkfrontに送信してよろしいですか？"
     }
   ]
 }
