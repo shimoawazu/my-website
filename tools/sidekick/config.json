@@ -29,7 +29,7 @@
       "id": "submit-approval",
       "title": "承認依頼",
       "environments": [ "preview" ],
-      "url": "https://your.webhook.url/for/approval",
+      "url": "http://localhost:3000/webhook/for/approval",
       "includePaths": [ "**.docx**" ],
       "passConfig": true,
       "submit": true,
