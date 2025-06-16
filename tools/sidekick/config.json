@@ -29,7 +29,7 @@
       "id": "submit-approval",
       "title": "承認依頼",
       "environments": [ "preview" ],
-      "js": "/submit-approval.js",
+      "js": "submit-approval.js",
       "confirmation": "承認依頼をWorkfrontに送信してよろしいですか？"
     }
   ]
