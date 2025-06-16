@@ -31,7 +31,7 @@
       "environments": [ "preview" ],
       "url": "https://your.webhook.url/for/approval",
       "includePaths": [ "**.docx**" ],
-      "passConfig": false,
+      "passConfig": true,
       "submit": true,
       "confirmation": "承認依頼をWorkfrontに送信してよろしいですか？"
     }
