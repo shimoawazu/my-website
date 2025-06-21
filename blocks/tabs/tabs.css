@@ -2,7 +2,7 @@
   display: flex;
   gap: 0.5ch;
   max-width: 100%;
-  font-size: var(--body-font-size-m);
+  font-size: var(--body-font-size-xs);
   overflow-x: auto;
 }
 
@@ -19,6 +19,7 @@
 }
 
 .tabs .tabs-list button {
+  font-size: 16px; 
   flex: 0 0 max-content;
   margin: 0;
   border: 1px solid #dadada;
