@@ -2,7 +2,7 @@
   display: flex;
   gap: 0.5ch;
   max-width: 100%;
-  font-size: var(--body-font-size-xs);
+  font-size: var(--body-font-size-m);
   overflow-x: auto;
 }
 
