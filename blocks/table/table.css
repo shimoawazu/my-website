@@ -56,7 +56,7 @@
 }
 
 /* striped variant */
-.table.striped tbody tr:nth-child(odd) {
+.table.striped tbody tr:nth-child(even) { /* odd*/
   background-color: var(--light-color);
 }
 
