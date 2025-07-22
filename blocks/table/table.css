@@ -59,10 +59,10 @@
 /*.table.striped tbody tr:nth-child(odd) { 
   background-color: var(--light-color);*/
 .table.striped tbody tr:nth-child(odd) {
-  background-color: #f9f9f9;
+  background-color: #d0b3df;
 }
 .table.striped tbody tr:nth-child(even) {
-  background-color: #d0b3df;
+  background-color: #f9f9f9;
 }
 
 /* bordered variant */
