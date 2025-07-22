@@ -75,4 +75,7 @@
 .table table th:nth-child(2) {
   width: 60%; /* お好みの幅に調整 */
 }
+.table table thead th {
+  background-color: #d1ffb9;
+}
 
