@@ -10,10 +10,6 @@
   font-size: var(--body-font-size-xs);
 }
 
-.table table thead th {
-  background-color: #d1ffb9; /* add */
-}
-
 @media (width >= 600px) {
   .table table {
     font-size: var(--body-font-size-s);
@@ -68,6 +64,7 @@
 .table.striped tbody tr:nth-child(even) {
   background-color: #f9f9f9;
 }*/
+}
 
 /* bordered variant */
 .table.bordered table th,
