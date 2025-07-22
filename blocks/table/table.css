@@ -56,8 +56,13 @@
 }
 
 /* striped variant */
-.table.striped tbody tr:nth-child(even) { /* odd*/
-  background-color: var(--light-color);
+/*.table.striped tbody tr:nth-child(odd) { 
+  background-color: var(--light-color);*/
+.table.striped tbody tr:nth-child(odd) {
+  background-color: #f9f9f9;
+}
+.table.striped tbody tr:nth-child(even) {
+  background-color: #d0b3df;
 }
 
 /* bordered variant */
