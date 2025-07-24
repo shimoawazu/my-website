@@ -29,25 +29,8 @@
     justify-content: center;
     position: relative;
     width: 100%;
-    min-height: 60vh;
-    /*min-height: min(50vw, calc(100dvh - var(--header-height)));*/
+    min-height: min(50vw, calc(200dvh - var(--header-height)));
 
-}
-
-/* タブレット以上 */
-@media (min-width: 600px) {
-  .carousel .carousel-slide {
-    width: 100%;
-    min-height: 50vw; /* 横幅に応じた高さ（横長画像に最適） */
-  }
-}
-
-/* PC以上 */
-@media (min-width: 1024px) {
-  .carousel .carousel-slide {
-    width: 100%;
-    min-height: calc(100vh - var(--header-height, 80px)); /* 画面全体に広がる */
-  }
 }
 
 .carousel .carousel-slide:has(.carousel-slide-content[data-align='center']) {
