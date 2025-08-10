@@ -1,103 +1,37 @@
-.cardsh {
+.cards > ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 24px;
-  align-items: stretch;
-}
-
-/* ====== 1カード ====== */
-.cardsh > div {
-  display: flex;               /* 画像 | テキスト を横並び */
+  grid-template-columns: repeat(3, 1fr); /* 3列カード */
   gap: 16px;
-  padding: 16px;
-  border: 1px solid var(--dark-color);
-  background: var(--background-color);
-  border-radius: 12px;
-  transition: box-shadow .15s ease, transform .15s ease;
-}
-.cardsh > div:hover {
-  box-shadow: 0 6px 18px rgba(0,0,0,.08);
-  transform: translateY(-1px);
 }
 
-/* ====== 画像枠（正方形・トリミング） ====== */
-.cardsh > div > div:first-child {
-  flex: 0 0 140px;             /* 基本は140px幅（PC） */
-  width: 140px;
-  aspect-ratio: 1 / 1;         /* 常に正方形 */
-  line-height: 0;              /* 余白抑制 */
+.cards > ul > li {
+  border: 1px solid var(--dark-color);
+  background-color: var(--background-color);
+  display: flex;            /* 画像とテキストを横並び */
+  align-items: flex-start;   /* 上揃えに変更（中央揃えにしたければ center） */
+  gap: 16px;                 /* 画像とテキストの間の余白 */
+  padding: 12px;
 }
-.cardsh > div > div:first-child picture,
-.cardsh > div > div:first-child img {
+
+.cards .cards-card-image {
+  flex: 0 0 100px;           /* 画像部分の固定幅 */
+  width: 100px;
+  aspect-ratio: 1 / 1;       /* 正方形に */
+}
+
+.cards .cards-card-image picture,
+.cards .cards-card-image img {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;            /* はみ出しを自然にトリミング */
-  border-radius: 8px;
+  object-fit: cover;
 }
 
-/* ====== テキスト側 ====== */
-.cardsh > div > div:last-child {
-  flex: 1 1 auto;
-  min-width: 0;                 /* これが無いと長文で横スクロールが出る */
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.cardsh > div > div:last-child p {
+.cards .cards-card-body {
+  flex: 1;                   /* 残り幅いっぱいにテキスト */
   margin: 0;
-  line-height: 1.5;
-  word-break: break-word;
-}
-
-/* 1行目：商品名（2行まで表示して超過は省略） */
-.cardsh > div > div:last-child p:nth-child(1) {
-  font-weight: 600;
-  font-size: clamp(1rem, 0.95rem + 0.2vw, 1.05rem);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;        /* 2行で省略 */
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-/* 2行目：価格を強調 */
-.cardsh > div > div:last-child p:nth-child(2) {
-  font-weight: 700;
-  font-size: clamp(1rem, 0.95rem + 0.2vw, 1.05rem);
-}
-
-/* 3行目：案内文は控えめ＋リンク色寄せ */
-.cardsh > div > div:last-child p:nth-child(3) {
-  color: var(--link-color);
-  font-size: var(--body-font-size-s, 0.92rem);
-  opacity: .9;
-}
-
-/* ====== レスポンシブ ====== */
-@media (max-width: 1024px) {
-  .cardsh {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .cardsh > div > div:first-child {
-    flex-basis: 120px;
-    width: 120px;
-  }
-}
-
-@media (max-width: 680px) {
-  .cardsh {
-    grid-template-columns: 1fr;   /* 1列 */
-  }
-  .cardsh > div {
-    gap: 12px;
-    padding: 14px;
-  }
-  .cardsh > div > div:first-child {
-    flex-basis: 100px;            /* モバイルは少し小さめ */
-    width: 100px;
-  }
-  /* モバイルで商品名は最大3行まで表示（見やすさ重視） */
-  .cardsh > div > div:last-child p:nth-child(1) {
-    -webkit-line-clamp: 3;
-  }
+  min-width: 0;              /* テキストの折り返し防止用 */
 }
