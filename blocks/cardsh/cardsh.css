@@ -1,27 +1,30 @@
+/* ---- レイアウト（デフォルト＝PC想定：3列） ---- */
 .cardsh > ul {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(3, 1fr); /* 3列カード */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
 }
 
+/* ---- 各カードの横並び ---- */
 .cardsh > ul > li {
   border: 1px solid var(--dark-color);
   background-color: var(--background-color);
-  display: flex;            /* 画像とテキストを横並び */
-  align-items: flex-start;   /* 上揃えに変更（中央揃えにしたければ center） */
-  gap: 16px;                 /* 画像とテキストの間の余白 */
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
   padding: 12px;
 }
 
+/* 画像（左） */
 .cardsh .cardsh-card-image {
-  flex: 0 0 100px;           /* 画像部分の固定幅 */
+  flex: 0 0 100px;
   width: 100px;
-  aspect-ratio: 1 / 1;       /* 正方形に */
+  aspect-ratio: 1 / 1;
+  line-height: 0;
 }
-
 .cardsh .cardsh-card-image picture,
 .cardsh .cardsh-card-image img {
   display: block;
@@ -30,8 +33,24 @@
   object-fit: cover;
 }
 
+/* テキスト（右）— フォントサイズは変数で調整可能 */
 .cardsh .cardsh-card-body {
-  flex: 1;                   /* 残り幅いっぱいにテキスト */
+  flex: 1 1 auto;
+  min-width: 0;
   margin: 0;
-  min-width: 0;              /* テキストの折り返し防止用 */
+  font-size: var(--cardsh-body-font-size, 0.95rem); /* ←ここで調整 */
+  line-height: 1.5;
+}
+
+/* ---- レスポンシブ ---- */
+/* スマホは1列（ブレークポイントはお好みで） */
+@media (max-width: 680px) {
+  .cardsh > ul {
+    grid-template-columns: 1fr;
+  }
+  /* スマホでは画像少し小さめ */
+  .cardsh .cardsh-card-image {
+    flex-basis: 90px;
+    width: 90px;
+  }
 }
