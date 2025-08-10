@@ -1,21 +1,69 @@
+/* 3カラムのカードグリッドは維持 */
+.cards > ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px; /* grid-gap は gap に統一 */
+}
+
+/* 各カード(li)の中身を横並びに */
 .cards > ul > li {
   border: 1px solid var(--dark-color);
   background-color: var(--background-color);
-  display: flex;            /* 横並びにする */
-  align-items: center;      /* 上下中央揃え */
+  display: flex;           /* ← 横並び */
+  align-items: stretch;     /* 画像とテキストの高さを揃えやすい */
+  gap: 16px;                /* 画像とテキストの間隔 */
 }
 
+/* 画像側：固定幅＋正方形をキープ */
 .cards .cards-card-image {
-  flex: 0 0 auto;           /* 画像の幅を固定 */
-  width: 100px;             /* 必要に応じて調整 */
+  flex: 0 0 120px;          /* 固定幅（必要に応じて調整） */
+  width: 120px;
+  aspect-ratio: 1 / 1;
+  line-height: 0;
 }
 
-.cards > ul > li img {
+/* 画像のはみ出し対策＆カバー */
+.cards .cards-card-image picture,
+.cards .cards-card-image img {
+  display: block;
   width: 100%;
-  height: auto;
+  height: 100%;
   object-fit: cover;
 }
 
+/* テキスト側：残りを使う。折り返し可能に */
 .cards .cards-card-body {
-  margin: 0 16px;           /* 画像とテキストの間に余白 */
+  flex: 1 1 auto;
+  margin: 0;               /* 既存の16pxマージンは横並びでは不要 */
+  min-width: 0;            /* 長い単語でのはみ出し防止に重要 */
+}
+.cards .cards-card-body > *:first-child {
+  margin-top: 0;
+}
+
+/* ▼ 重要：縦カード用の既存ルールを上書きして無効化（横並び時は不要） */
+.cards > ul > li img {
+  width: auto;             /* 上書き */
+  height: auto;            /* 上書き */
+  aspect-ratio: auto;      /* 上書き */
+  object-fit: initial;     /* 上書き */
+}
+
+/* レスポンシブ：画面幅で段数を調整 */
+@media (max-width: 900px) {
+  .cards > ul {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .cards > ul {
+    grid-template-columns: 1fr;
+  }
+  /* スマホでは画像とテキストの高さ差を緩和 */
+  .cards > ul > li {
+    align-items: center;
+  }
 }
