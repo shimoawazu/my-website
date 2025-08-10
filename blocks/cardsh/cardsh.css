@@ -1,4 +1,4 @@
-.cards > ul {
+.cardsh > ul {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -7,7 +7,7 @@
   gap: 16px;
 }
 
-.cards > ul > li {
+.cardsh > ul > li {
   border: 1px solid var(--dark-color);
   background-color: var(--background-color);
   display: flex;            /* 画像とテキストを横並び */
@@ -16,21 +16,21 @@
   padding: 12px;
 }
 
-.cards .cards-card-image {
+.cardsh .cardsh-card-image {
   flex: 0 0 100px;           /* 画像部分の固定幅 */
   width: 100px;
   aspect-ratio: 1 / 1;       /* 正方形に */
 }
 
-.cards .cards-card-image picture,
-.cards .cards-card-image img {
+.cardsh .cardsh-card-image picture,
+.cardsh .cardsh-card-image img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.cards .cards-card-body {
+.cardsh .cardsh-card-body {
   flex: 1;                   /* 残り幅いっぱいにテキスト */
   margin: 0;
   min-width: 0;              /* テキストの折り返し防止用 */
