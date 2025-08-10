@@ -1,0 +1,21 @@
+.cards > ul > li {
+  border: 1px solid var(--dark-color);
+  background-color: var(--background-color);
+  display: flex;            /* 横並びにする */
+  align-items: center;      /* 上下中央揃え */
+}
+
+.cards .cards-card-image {
+  flex: 0 0 auto;           /* 画像の幅を固定 */
+  width: 100px;             /* 必要に応じて調整 */
+}
+
+.cards > ul > li img {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+.cards .cards-card-body {
+  margin: 0 16px;           /* 画像とテキストの間に余白 */
+}
