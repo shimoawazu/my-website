@@ -131,29 +131,29 @@ a:hover {
   color: var(--link-hover-color);
 }
 
-/* buttons */
+/* buttons → シンプルなリンク風に修正 */
 a.button:any-link, button {
   font-family: var(--body-font-family);
   display: inline-block;
   box-sizing: border-box;
   text-decoration: none;
-  border: 2px solid transparent;
-  padding: 5px 30px;
-  text-align: center;
+  border: none; /* 枠線なし */
+  padding: 0;   /* 余白なし */
+  background: none; /* 背景なし */
+  color: var(--link-color); /* 通常リンク色 */
   font-style: normal;
   font-weight: 600;
   cursor: pointer;
-  color: var(--background-color);
-  background-color: var(--link-color);
   margin: 16px 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  border-radius: 30px;
 }
 
-a.button:hover, a.button:focus, button:hover, button:focus  {
-  background-color: var(--link-hover-color);
+a.button:hover, 
+a.button:focus, 
+button:hover, 
+button:focus {
+  text-decoration: underline;
+  color: var(--link-hover-color);
+  background: none; /* 背景変更なし */
   cursor: pointer;
 }
 
