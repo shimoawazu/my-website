@@ -1,4 +1,4 @@
-/* ===== Carousel (clean, 50/50, image contain 90%) ===== */
+/* ===== Carousel (clean, 50/50, image contain 90% with 5px margin) ===== */
 
 :root {
   /* contentテキスト調整用変数 */
@@ -45,14 +45,16 @@
 .carousel .carousel-slide .carousel-slide-image {
   flex: 0 0 50%;
   max-width: 50%;
-  display: flex;                /* 画像を中央に置くため */
+  display: flex;                /* 中央配置用 */
   align-items: center;          /* 縦中央 */
   justify-content: center;      /* 横中央 */
   position: relative;
   overflow: hidden;
+  padding: 5px;                 /* 常に5pxの余白を確保 */
+  box-sizing: border-box;
 }
 
-/* 画像は絶対配置しない（通常フロー） */
+/* 画像は通常フロー */
 .carousel .carousel-slide .carousel-slide-image picture {
   position: static;
   display: block;
@@ -60,14 +62,14 @@
   height: 100%;
 }
 
-/* 画像は領域の 90% で「全体表示」＝トリミングなし＆中心配置 */
+/* 画像は領域の90%サイズで中心表示 */
 .carousel .carousel-slide .carousel-slide-image picture > img {
   display: block;
   max-width: 90%;
   max-height: 90%;
   width: auto;
   height: auto;
-  object-fit: contain;
+  object-fit: contain;          /* トリミングせず全体表示 */
 }
 
 /* 右：contentカラム(50%) */
@@ -87,9 +89,9 @@
   font-size: var(--carousel-content-font-size);
   font-weight: var(--carousel-content-font-weight);
 
-  /* ご指定：背景=白 / 文字=紺 */
-  background-color: #ffffff;
-  color: #0a2a66; /* 紺色 */
+  /* デザイン */
+  background-color: #ffffff;    /* 背景 白 */
+  color: #0a2a66;               /* 文字 紺 */
 }
 
 /* インジケーター */
