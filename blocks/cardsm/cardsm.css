@@ -40,12 +40,12 @@
   margin: 0;
   font-size: 16px;     /* 指定どおり */
   font-weight: 200;    /* 指定どおり */
-  line-height: 1.35;   /* ← 行間を狭く */
+  line-height: 0.35;   /* ← 行間を狭く */
 }
 
 /* インラインのリンクの前に少し余白を付ける */
 .cardsm .cardsm-card-body a {
-  margin-left: 0.35em;          /* ← リンクの前（左側）に余白 */
+  margin-left: 5.0em;          /* ← リンクの前（左側）に余白 */
 }
 
 /* 行頭に来るリンクはインデントしない */
