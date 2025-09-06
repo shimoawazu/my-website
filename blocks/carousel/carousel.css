@@ -1,9 +1,10 @@
-/* ===== Carousel (clean, 50/50, image contain 90% with 5px margin) ===== */
+/* ===== Carousel (clean, 50/50, image contain 90% with 5px margin, gray background) ===== */
 
 :root {
   /* contentテキスト調整用変数 */
   --carousel-content-font-size: 16px;
   --carousel-content-font-weight: 200;
+  --carousel-gray-bg: #e0e0e0; /* グレー背景色 */
 }
 
 .carousel .carousel-slides-container {
@@ -52,6 +53,7 @@
   overflow: hidden;
   padding: 5px;                 /* 常に5pxの余白を確保 */
   box-sizing: border-box;
+  background-color: var(--carousel-gray-bg); /* 背景をグレーに */
 }
 
 /* 画像は通常フロー */
@@ -89,9 +91,9 @@
   font-size: var(--carousel-content-font-size);
   font-weight: var(--carousel-content-font-weight);
 
-  /* デザイン */
-  background-color: #ffffff;    /* 背景 白 */
-  color: #0a2a66;               /* 文字 紺 */
+  /* 背景と文字色を変更 */
+  background-color: var(--carousel-gray-bg); /* グレー背景 */
+  color: #0a2a66; /* 紺文字 */
 }
 
 /* インジケーター */
