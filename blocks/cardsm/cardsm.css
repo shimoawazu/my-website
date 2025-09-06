@@ -33,13 +33,26 @@
   object-fit: cover;
 }
 
-/* テキスト（右）— フォントサイズは変数で調整可能 */
+/* テキスト（右） */
 .cardsm .cardsm-card-body {
   flex: 1 1 auto;
   min-width: 0;
   margin: 0;
-  font-size: var(--cards-body-font-size, 0.95rem); /* ←ここで調整 */
-  line-height: 1.5;
+  font-size: 16px;     /* 指定どおり */
+  font-weight: 200;    /* 指定どおり */
+  line-height: 1.35;   /* ← 行間を狭く */
+}
+
+/* インラインのリンクの前に少し余白を付ける */
+.cardsm .cardsm-card-body a {
+  margin-left: 0.35em;          /* ← リンクの前（左側）に余白 */
+}
+
+/* 行頭に来るリンクはインデントしない */
+.cardsm .cardsm-card-body a:first-child,
+.cardsm .cardsm-card-body p > a:first-child,
+.cardsm .cardsm-card-body li > a:first-child {
+  margin-left: 0;
 }
 
 /* ---- レスポンシブ ---- */
