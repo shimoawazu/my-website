@@ -1,11 +1,11 @@
 /* ===== Tabs (customizable size/weight/spacing) ===== */
 
 :root {
-  --tabs-font-size: 12px;
-  --tabs-font-size-s: 14px;
-  --tabs-font-size-m: 16px;
+  --tabs-font-size: 14px;
+  --tabs-font-size-s: 16px;
+  --tabs-font-size-m: 18px;
 
-  --tabs-list-gap: 0.25rem;        /* ボタン間の隙間 */
+  --tabs-list-gap: 0.75rem;        /* ボタン間の隙間 */
   --tabs-list-padding: 4px 8px;    /* リスト周囲の内側余白 */
 
   --tabs-button-font-size: 1rem;   /* ボタンの文字サイズ */
@@ -14,6 +14,10 @@
   --tabs-button-padding: 0.6em 0.9em;
 
   --tabs-panel-margin-top: 0;      /* リストとパネルの段差を消す場合 */
+
+  --tabs-panel-font-size: 14px;
+  --tabs-panel-font-weight: 100;
+  --tabs-panel-line-height: 1.0;
 }
 
 
@@ -72,6 +76,9 @@
   padding: 24px;
   border: 1px solid #dadada;
   overflow: auto;
+  font-size: var(--tabs-panel-font-size);
+  font-weight: var(--tabs-panel-font-weight);
+  line-height: var(--tabs-panel-line-height)
 }
 
 .tabs .tabs-panel[aria-hidden='true'] {
