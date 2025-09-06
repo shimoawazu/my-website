@@ -15,8 +15,8 @@
 
   --tabs-panel-margin-top: 0;      /* リストとパネルの段差を消す場合 */
 
-  --tabs-panel-font-size: 14px;
-  --tabs-panel-font-weight: 100;
+  --tabs-panel-font-size: 16px;
+  --tabs-panel-font-weight: 200;
   --tabs-panel-line-height: 1.0;
 }
 
