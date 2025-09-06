@@ -1,4 +1,4 @@
-/* ===== Carousel (clean, 50/50, image contain 80%) ===== */
+/* ===== Carousel (clean, 50/50, image contain 90%) ===== */
 
 :root {
   /* contentテキスト調整用変数 */
@@ -46,8 +46,8 @@
   flex: 0 0 50%;
   max-width: 50%;
   display: flex;                /* 画像を中央に置くため */
-  align-items: center;
-  justify-content: center;
+  align-items: center;          /* 縦中央 */
+  justify-content: center;      /* 横中央 */
   position: relative;
   overflow: hidden;
 }
@@ -60,7 +60,7 @@
   height: 100%;
 }
 
-/* 画像は領域の 80% で「全体表示」＝トリミングなし */
+/* 画像は領域の 90% で「全体表示」＝トリミングなし＆中心配置 */
 .carousel .carousel-slide .carousel-slide-image picture > img {
   display: block;
   max-width: 90%;
@@ -87,9 +87,9 @@
   font-size: var(--carousel-content-font-size);
   font-weight: var(--carousel-content-font-weight);
 
-  /* デザイン（必要なければ変更/削除可） */
-  color: white;
-  background-color: rgba(19 19 19 / 75%);
+  /* ご指定：背景=白 / 文字=紺 */
+  background-color: #ffffff;
+  color: #0a2a66; /* 紺色 */
 }
 
 /* インジケーター */
