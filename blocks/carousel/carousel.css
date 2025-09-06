@@ -1,34 +1,58 @@
-/* =========================
-   Carousel 50/50 Layout + Image 80% contain
-   ========================= */
+/* ===== Carousel (clean, 50/50, image contain 80%) ===== */
 
-/* content テキスト調整用のカスタム変数 */
 :root {
-  --carousel-content-font-size: 18px; /* 例: 18px, 20px, 1rem など */
-  --carousel-content-font-weight: 400; /* 例: 400, 500, 600 など */
+  /* contentテキスト調整用変数 */
+  --carousel-content-font-size: 18px;
+  --carousel-content-font-weight: 400;
 }
 
-/* スライド：左右2カラム（50% / 50%） */
-.carousel .carousel-slide {
+.carousel .carousel-slides-container {
+  position: relative;
+}
+
+.carousel .carousel-slides,
+.carousel .carousel-slide-indicators {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.carousel .carousel-slides {
   display: flex;
-  flex-direction: row;
-  align-items: stretch; /* 高さ揃え */
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  overflow: scroll clip;
+}
+
+.carousel .carousel-slides::-webkit-scrollbar {
+  display: none;
+}
+
+/* スライド：左右2カラム(50%/50%) */
+.carousel .carousel-slide {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: row;          /* 横並び */
+  align-items: stretch;         /* 高さ揃え */
   justify-content: stretch;
+  position: relative;
+  width: 100%;
   min-height: min(50vw, calc(100dvh - var(--header-height)));
 }
 
-/* 左：image カラム（50%） */
+/* 左：imageカラム(50%) */
 .carousel .carousel-slide .carousel-slide-image {
   flex: 0 0 50%;
   max-width: 50%;
-  display: flex;                /* 画像を中央に配置するためにflex化 */
-  align-items: center;          /* 縦中央 */
-  justify-content: center;      /* 横中央 */
+  display: flex;                /* 画像を中央に置くため */
+  align-items: center;
+  justify-content: center;
   position: relative;
   overflow: hidden;
 }
 
-/* 以前の absolute 全面配置を無効化 */
+/* 画像は絶対配置しない（通常フロー） */
 .carousel .carousel-slide .carousel-slide-image picture {
   position: static;
   display: block;
@@ -36,39 +60,127 @@
   height: 100%;
 }
 
-/* 画像は領域の 80% で「全体表示」＝トリミングしない（contain） */
+/* 画像は領域の 80% で「全体表示」＝トリミングなし */
 .carousel .carousel-slide .carousel-slide-image picture > img {
   display: block;
   max-width: 80%;
   max-height: 80%;
   width: auto;
   height: auto;
-  object-fit: contain;          /* トリミングせず全体表示 */
+  object-fit: contain;
 }
 
-/* 右：content カラム（50%） */
+/* 右：contentカラム(50%) */
 .carousel .carousel-slide .carousel-slide-content {
   flex: 0 0 50%;
   max-width: 50%;
   display: flex;
   flex-direction: column;
-  justify-content: center;      /* 縦中央に揃える */
+  justify-content: center;      /* 縦中央 */
   align-items: flex-start;      /* 左寄せ */
   box-sizing: border-box;
   padding: 24px 32px;
+  margin: 0;
+  width: auto;
 
-  /* テキストは変数で調整可能 */
+  /* テキストは変数で調整 */
   font-size: var(--carousel-content-font-size);
   font-weight: var(--carousel-content-font-weight);
 
-  /* 既存デザイン踏襲（必要なければ削除OK） */
+  /* デザイン（必要なければ変更/削除可） */
   color: white;
   background-color: rgba(19 19 19 / 75%);
-  margin: 0;                    /* 以前の margin 解除 */
-  width: auto;                  /* 可変幅 */
 }
 
-/* オプション：モバイルで縦積みにしたい場合は有効化
+/* インジケーター */
+.carousel .carousel-slide-indicators {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 12px;
+  padding: 12px;
+  background-color: var(--light-color);
+  line-height: 0;
+}
+
+.carousel .carousel-slide-indicator button {
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+  background-color: #dadada;
+  transition: background-color 0.2s;
+}
+
+.carousel .carousel-slide-indicator button:disabled,
+.carousel .carousel-slide-indicator button:hover,
+.carousel .carousel-slide-indicator button:focus-visible {
+  background-color: var(--text-color);
+}
+
+/* ナビボタン */
+.carousel .carousel-navigation-buttons {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 1;
+}
+
+/* stylelint-disable-next-line no-descending-specificity */
+.carousel .carousel-navigation-buttons button {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  border-radius: 50%;
+  padding: 0;
+  background-color: rgba(19 19 19 / 25%);
+  transition: background-color 0.2s;
+}
+
+.carousel .carousel-navigation-buttons button:hover,
+.carousel .carousel-navigation-buttons button:focus-visible {
+  background-color: rgba(19 19 19 / 75%);
+}
+
+.carousel .carousel-navigation-buttons button::after {
+  display: block;
+  content: '';
+  border: 2px solid;
+  border-bottom: 0;
+  border-left: 0;
+  height: 12px;
+  width: 12px;
+  position: absolute;
+  top: 50%;
+  left: calc(50% + 2px);
+  transform: translate(-50%, -50%) rotate(-135deg);
+}
+
+.carousel .carousel-navigation-buttons button.slide-next::after {
+  transform: translate(-50%, -50%) rotate(45deg);
+  left: calc(50% - 2px);
+}
+
+/* 600px以上の微調整（余白等） */
+@media (width >= 600px) {
+  .carousel .carousel-navigation-buttons {
+    left: 24px;
+    right: 24px;
+  }
+
+  .carousel .carousel-slide .carousel-slide-content {
+    padding: 32px 48px;
+  }
+}
+
+/* モバイルで縦積みにする場合（必要なら有効化）
 @media (width < 600px) {
   .carousel .carousel-slide {
     flex-direction: column;
@@ -81,7 +193,7 @@
   }
   .carousel .carousel-slide .carousel-slide-image picture > img {
     max-width: 100%;
-    max-height: 60vh; /* 画面高に合わせたい場合 */
+    max-height: 60vh;
   }
 }
 */
