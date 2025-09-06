@@ -1,10 +1,10 @@
-/* ===== Carousel (clean, 50/50, image contain 90% with 5px margin, gray background) ===== */
+/* ===== Carousel (50/50, image centered at 90%, no padding, gray backgrounds) ===== */
 
 :root {
   /* contentテキスト調整用変数 */
   --carousel-content-font-size: 16px;
   --carousel-content-font-weight: 200;
-  --carousel-gray-bg: #e0e0e0; /* グレー背景色 */
+  --carousel-gray-bg: #ffffff; /* グレー背景色 */
 }
 
 .carousel .carousel-slides-container {
@@ -46,32 +46,34 @@
 .carousel .carousel-slide .carousel-slide-image {
   flex: 0 0 50%;
   max-width: 50%;
-  display: flex;                /* 中央配置用 */
-  align-items: center;          /* 縦中央 */
-  justify-content: center;      /* 横中央 */
+  display: flex;                /* picture自体を中央に置く用だが picture が100%なので内部もセンターにする */
+  align-items: center;
+  justify-content: center;
   position: relative;
   overflow: hidden;
-  padding: 5px;                 /* 常に5pxの余白を確保 */
+  padding: 0;                   /* ご指定：余白 0px */
   box-sizing: border-box;
-  background-color: var(--carousel-gray-bg); /* 背景をグレーに */
+  background-color: var(--carousel-gray-bg); /* グレー背景 */
 }
 
-/* 画像は通常フロー */
+/* picture もフレックス化して内部(img)を中央寄せ */
 .carousel .carousel-slide .carousel-slide-image picture {
   position: static;
-  display: block;
+  display: flex;                /* ここで img を中央寄せ */
+  align-items: center;          /* 縦中央 */
+  justify-content: center;      /* 横中央 */
   width: 100%;
   height: 100%;
 }
 
-/* 画像は領域の90%サイズで中心表示 */
+/* 画像は領域の90%サイズで中心表示（トリミングなし） */
 .carousel .carousel-slide .carousel-slide-image picture > img {
   display: block;
   max-width: 90%;
   max-height: 90%;
   width: auto;
   height: auto;
-  object-fit: contain;          /* トリミングせず全体表示 */
+  object-fit: contain;
 }
 
 /* 右：contentカラム(50%) */
@@ -91,9 +93,9 @@
   font-size: var(--carousel-content-font-size);
   font-weight: var(--carousel-content-font-weight);
 
-  /* 背景と文字色を変更 */
+  /* 背景と文字色 */
   background-color: var(--carousel-gray-bg); /* グレー背景 */
-  color: #0a2a66; /* 紺文字 */
+  color: #00136f; /* 紺文字 */
 }
 
 /* インジケーター */
