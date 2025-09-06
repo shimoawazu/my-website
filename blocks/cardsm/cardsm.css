@@ -52,7 +52,7 @@
 .cardsm .cardsm-card-body a:first-child,
 .cardsm .cardsm-card-body p > a:first-child,
 .cardsm .cardsm-card-body li > a:first-child {
-  margin-left: 0;
+  margin-left: 10;
 }
 
 /* ---- レスポンシブ ---- */
