@@ -1,11 +1,11 @@
 /* ===== Tabs (customizable size/weight/spacing) ===== */
 
 :root {
-  --tabs-font-size: 14px;
-  --tabs-font-size-s: 16px;
-  --tabs-font-size-m: 18px;
+  --tabs-font-size: 12px;
+  --tabs-font-size-s: 14px;
+  --tabs-font-size-m: 16px;
 
-  --tabs-list-gap: 0.75rem;        /* ボタン間の隙間 */
+  --tabs-list-gap: 0.25rem;        /* ボタン間の隙間 */
   --tabs-list-padding: 4px 8px;    /* リスト周囲の内側余白 */
 
   --tabs-button-font-size: 1rem;   /* ボタンの文字サイズ */
