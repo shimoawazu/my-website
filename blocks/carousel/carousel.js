@@ -102,6 +102,30 @@ function bindEvents(block) {
   });
 }
 
+function startAutoplay(block, intervalMs = 3000) {
+  // 既存タイマーがあればクリア
+  if (block._carouselTimer) clearInterval(block._carouselTimer);
+
+  block._carouselTimer = setInterval(() => {
+    const curr = parseInt(block.dataset.activeSlide, 10) || 0;
+    showSlide(block, curr + 1);
+  }, intervalMs);
+
+  // ホバー/フォーカスで一時停止、離れたら再開
+  const stop = () => {
+    if (block._carouselTimer) clearInterval(block._carouselTimer);
+    block._carouselTimer = null;
+  };
+  const resume = () => {
+    if (!block._carouselTimer) startAutoplay(block, intervalMs);
+  };
+
+  block.addEventListener('mouseenter', stop);
+  block.addEventListener('focusin', stop);
+  block.addEventListener('mouseleave', resume);
+  block.addEventListener('focusout', resume);
+}
+
 function createSlide(row, slideIndex, carouselId) {
   const slide = document.createElement('li');
   slide.dataset.slideIndex = String(slideIndex);
@@ -189,8 +213,10 @@ export default async function decorate(block) {
   if (firstSlide) {
     updateActiveSlide(firstSlide);
   }
-  // 単一スライドでなければイベントをバインド
+
   if (!isSingleSlide) {
     bindEvents(block);
+    // ★ 3秒間隔で自動再生
+    startAutoplay(block, 3000);
   }
 }
