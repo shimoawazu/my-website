@@ -45,14 +45,14 @@
 
 /* インラインのリンクの前に少し余白を付ける */
 .cardsm .cardsm-card-body a {
-  margin-left: 5.0em;          /* ← リンクの前（左側）に余白 */
+  margin-left: 1.0em;          /* ← リンクの前（左側）に余白 */
 }
 
 /* 行頭に来るリンクはインデントしない */
 .cardsm .cardsm-card-body a:first-child,
 .cardsm .cardsm-card-body p > a:first-child,
 .cardsm .cardsm-card-body li > a:first-child {
-  margin-left: 2;
+  margin-left: 1;
 }
 
 /* ---- レスポンシブ ---- */
