@@ -1,4 +1,4 @@
-/* imagelink block - 1(左70%) + 3(右30%) */
+/* imagelink block - 左(1枚) + 右(3枚) レイアウト */
 .block.imagelink {
   --imagelink-gap: 12px;
   --imagelink-radius: 12px;
@@ -8,23 +8,21 @@
   margin-block: 24px;
 }
 
-/* レイアウト（必ず2カラムになるようにこのラッパーに依存） */
+/* レイアウト：mobile は1カラム、>= 640px で 70% / 30% の2カラム */
 .block.imagelink .imagelink-layout {
   display: grid;
-  grid-template-columns: 1fr; /* mobile: 1カラム */
+  grid-template-columns: 1fr;
   gap: var(--imagelink-gap);
   align-items: start;
 }
-
-@media (min-width: 600px) {
+@media (min-width: 640px) {
   .block.imagelink .imagelink-layout {
     grid-template-columns: 70% 30%;
   }
 }
 
-/* 左（1枚目） */
-.block.imagelink .imagelink-left .imagelink-tile,
-.block.imagelink .imagelink-right .imagelink-tile {
+/* 左右各カラムの中身（タイル）共通 */
+.block.imagelink .imagelink-tile {
   position: relative;
   border-radius: var(--imagelink-radius);
   overflow: hidden;
@@ -44,34 +42,35 @@
 
 .block.imagelink .imagelink-thumb { line-height: 0; }
 
-.block.imagelink .imagelink-thumb picture,
-.block.imagelink .imagelink-thumb img {
+/* 左（1枚目）は高さ=画像の自然比率に任せる（16:9相当でもOK） */
+.block.imagelink .imagelink-left .imagelink-thumb,
+.block.imagelink .imagelink-left .imagelink-thumb picture,
+.block.imagelink .imagelink-left .imagelink-thumb img {
   display: block;
   width: 100%;
-  height: auto; /* 左側は自然比率 */
+  height: auto;
 }
-
 .block.imagelink .imagelink-left .imagelink-thumb img {
   object-fit: cover;
 }
 
-/* 右（2–4枚）は縦3分割。高さはJSで左に同期し、各アイテムを等分 */
+/* 右（2〜4枚）は縦3分割。高さはJSで左に同期し、各アイテムを等分 */
 .block.imagelink .imagelink-right {
   display: flex;
   flex-direction: column;
   gap: var(--imagelink-gap);
-  /* height はJSで設定 */
+  /* height は JS が設定 */
 }
-
 .block.imagelink .imagelink-right .stack-item {
-  flex: 0 0 auto; /* JSでpx高さを入れる */
+  flex: 0 0 auto; /* JS で px 高さを入れる */
   min-height: 60px;
 }
-
+.block.imagelink .imagelink-right .stack-item .imagelink-thumb,
 .block.imagelink .imagelink-right .stack-item .imagelink-thumb picture,
 .block.imagelink .imagelink-right .stack-item .imagelink-thumb img {
+  display: block;
   width: 100%;
-  height: 100%;      /* 与えた高さをきっちり埋める */
+  height: 100%;      /* 与えた高さを埋める */
   object-fit: cover; /* 比率を崩さずトリミング */
 }
 
@@ -85,13 +84,11 @@
     opacity: 0;
     transition: opacity .2s ease;
   }
-  .block.imagelink .imagelink-left .imagelink-tile:hover,
-  .block.imagelink .imagelink-right .imagelink-tile:hover {
+  .block.imagelink .imagelink-tile:hover {
     transform: translateY(-2px);
     box-shadow: var(--imagelink-shadow-hover);
   }
-  .block.imagelink .imagelink-left .imagelink-tile:hover .imagelink-link::after,
-  .block.imagelink .imagelink-right .imagelink-tile:hover .imagelink-link::after {
+  .block.imagelink .imagelink-tile:hover .imagelink-link::after {
     opacity: 1;
   }
 }
