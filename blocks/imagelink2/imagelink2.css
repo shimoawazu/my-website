@@ -1,7 +1,7 @@
 /* ===== imagelink2 =====
    ・高さ：carouselmini の画像高さに同期（JSが --imagelink2-height 注入）
    ・幅　：imagelink の右カラム幅に同期（JSが --imagelink2-width 注入）
-   ・配置：JS側で imagelink ブロックの直後（右カラムの下に相当）へ移動
+   ・配置：imagelink ブロックの直後に置き、ブロック自体を右寄せ（margin-left:auto）
    ・内容：画像リンク2枚を縦に50%ずつ（gapあり）
 */
 
@@ -10,12 +10,18 @@
   --imagelink2-radius: 12px;
   --imagelink2-bg: #ffffff;
 
-  /* JS注入がなければ自然幅/auto で表示（フォールバック） */
+  /* JS注入がなければ自然幅/auto（=100%になる環境でもとりあえず表示） */
   width: var(--imagelink2-width, auto);
   height: var(--imagelink2-height, auto);
 
+  /* 右寄せのキモ */
+  display: block;
+  margin-left: auto;
+  margin-right: 0;
+
   /* imagelink から少し離す */
   margin-top: 12px;
+  box-sizing: border-box;
 }
 
 /* リスト全体（縦2分割） */
@@ -37,7 +43,7 @@
   background: var(--imagelink2-bg);
   border-radius: var(--imagelink2-radius);
   box-shadow: 0 2px 8px rgba(0 0 0 / 6%);
-  min-height: 120px; /* 高さ同期がない環境でも見える保険 */
+  min-height: 120px; /* フォールバックでも見える保険 */
 }
 
 /* 画像リンクが枠いっぱいに広がる */
@@ -61,10 +67,14 @@
   object-fit: cover;
 }
 
-/* 小さめ画面でも見た目を維持 */
+/* 小さめ画面の微調整 */
 @media (max-width: 599.98px) {
   .imagelink2 {
     --imagelink2-gap: 8px;
     --imagelink2-radius: 10px;
+
+    /* モバイルで右カラムがフル幅になるなら自然に左寄せでOK。
+       もし常に右端が良ければこの行は不要 */
+    margin-left: 0;
   }
 }

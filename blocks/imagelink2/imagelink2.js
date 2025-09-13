@@ -4,7 +4,7 @@
  *         無ければ最初の画像のアスペクト比から自動算出（フォールバック）
  * - 幅　：近傍 imagelink の右カラム実幅に同期（ResizeObserver）
  * - 配置：imagelink ブロック（全体）の「直後」にこのブロックを移動
- *         → 右側画像群の“下”に確実に来る（右カラム内ではない）
+ *         → 右側画像群の“下”に来る。右寄せは CSS/JS 両方で担保。
  * - 構造：オーサリング2行 → <ul><li> に変換
  */
 
@@ -20,28 +20,21 @@ function findImagelinkPartsNear(block) {
   let node = block.previousElementSibling;
   while (node) {
     const rootCand = node.classList?.contains('imagelink') ? node : node.querySelector?.('.imagelink');
-    if (rootCand) {
-      nearRoot = rootCand;
-      break;
-    }
+    if (rootCand) { nearRoot = rootCand; break; }
     node = node.previousElementSibling;
   }
-  if (!nearRoot) {
-    nearRoot = q('.imagelink'); // 最初のもの
-  }
+  if (!nearRoot) nearRoot = q('.imagelink');
 
   if (nearRoot) {
-    // 右カラム（実装差異に対応：明示クラス or 最後の子）
     rightCol =
       nearRoot.querySelector('.imagelink-right') ||
       nearRoot.querySelector(':scope > .imagelink__right') ||
       nearRoot.querySelector(':scope > div:last-child');
   }
-
   return { imagelinkRoot: nearRoot, rightCol };
 }
 
-/* ==== 近傍の carouselmini 画像フレームを探す（前方→後方→全体） ==== */
+/* ==== 近傍の carouselmini 画像フレームを探す ==== */
 function findCarouselMiniFrameNear(block) {
   let node = block.previousElementSibling;
   while (node) {
@@ -85,11 +78,18 @@ function normalizeRowToItem(row) {
 /* ==== 幅・高さの同期（フォールバック含む） ==== */
 function bindSizeSync(block, rightCol, cmFrame) {
   const applyWidth = () => {
-    // 右カラム幅 or 自分の親幅
     const base = rightCol || block.parentElement;
     if (!base) return;
     const w = Math.round(base.getBoundingClientRect().width);
-    if (w > 0) block.style.setProperty('--imagelink2-width', `${w}px`);
+    if (w > 0) {
+      block.style.setProperty('--imagelink2-width', `${w}px`);
+      // 右寄せを JS でも明示（親がflex/gridでも効く）
+      block.style.width = `${w}px`;
+      block.style.marginLeft = 'auto';
+      block.style.marginRight = '0';
+      block.style.justifySelf = 'end';   // CSS Grid 親のとき
+      block.style.alignSelf = 'start';   // 必要に応じて
+    }
   };
 
   const heightFromFrame = () => {
@@ -103,11 +103,9 @@ function bindSizeSync(block, rightCol, cmFrame) {
     const w = img.naturalWidth || parseInt(img.getAttribute('width'), 10) || 0;
     const h = img.naturalHeight || parseInt(img.getAttribute('height'), 10) || 0;
     if (w > 0 && h > 0) {
-      // ブロック幅に合わせた計算（2分割なので各アイテム高さは半分だが gap 分を加味）
       const bw = block.getBoundingClientRect().width || w;
-      const gap = parseFloat(getComputedStyle(block).getPropertyValue('--imagelink2-gap')) || 12;
-      const totalH = Math.round((bw * h) / w); // 画像比率で全高
-      return Math.max(120, totalH); // 最低高
+      const totalH = Math.round((bw * h) / w);
+      return Math.max(120, totalH);
     }
     return 0;
   };
@@ -115,43 +113,46 @@ function bindSizeSync(block, rightCol, cmFrame) {
   const applyHeight = () => {
     let h = heightFromFrame();
     if (!h || h <= 0) h = heightFromFirstImage();
-    if (h && h > 0) block.style.setProperty('--imagelink2-height', `${h}px`);
+    if (h && h > 0) {
+      block.style.setProperty('--imagelink2-height', `${h}px`);
+      block.style.height = `${h}px`;
+    }
   };
 
-  // 初期適用
+  // 初期
   applyWidth();
   applyHeight();
 
-  // 監視（幅/高さ）
+  // 監視
+  const roList = [];
   if (rightCol) {
     const roW = new ResizeObserver(applyWidth);
     roW.observe(rightCol);
+    roList.push(roW);
   } else if (block.parentElement) {
     const roW = new ResizeObserver(applyWidth);
     roW.observe(block.parentElement);
+    roList.push(roW);
   }
   if (cmFrame) {
     const roH = new ResizeObserver(applyHeight);
     roH.observe(cmFrame);
+    roList.push(roH);
   }
 
-  // 画像ロード後に再計算（フォールバック用）
+  // 画像ロード後
   const anyImg = q('.imagelink2-item img', block);
   if (anyImg && !anyImg.complete) {
     anyImg.addEventListener('load', () => { applyWidth(); applyHeight(); }, { once: true });
   }
 
-  window.addEventListener('resize', () => {
-    applyWidth();
-    applyHeight();
-  });
+  window.addEventListener('resize', () => { applyWidth(); applyHeight(); });
 }
 
-/* ==== imagelink ブロックの直後に移動（右群の下に置く） ==== */
+/* ==== imagelink ブロックの直後に移動（右群の下） ==== */
 function moveBlockAfterImagelink(block, imagelinkRoot) {
   if (!imagelinkRoot || !imagelinkRoot.parentNode) return;
   const parent = imagelinkRoot.parentNode;
-  // 既に直後なら何もしない
   if (block.previousElementSibling === imagelinkRoot) return;
   parent.insertBefore(block, imagelinkRoot.nextSibling);
 }
@@ -199,4 +200,7 @@ export default function decorate(block) {
 
   // 5) 画質まわり
   perfTweakImages(block);
+
+  // 6) 念のため：右寄せをクラスでも強制できるように
+  block.classList.add('imagelink2--right');
 }
