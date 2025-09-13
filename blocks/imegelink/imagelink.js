@@ -2,11 +2,9 @@
  * imagelink block (EDS/Franklin)
  * オーサリング: 4行1列（行=1..4）。
  * レイアウト: 左に1行目(幅70%)、右に2..4行目を縦3分割(幅30%)。
- * 右の高さは左画像の実高に同期し、各サムネは左画像高の30%に設定。
- * 画像: loading="lazy", decoding="async" を付与。
+ * 調整: 左の実高を取得し、右を同じ高さに。右は3等分して綺麗に収める。
+ * 画像: loading="lazy", decoding="async" を自動付与。
  */
-
-function q(sel, root = document) { return root.querySelector(sel); }
 
 function findLinkAndPicture(cell) {
   const link = cell.querySelector('a[href]');
@@ -17,7 +15,7 @@ function findLinkAndPicture(cell) {
     if (picture.tagName.toLowerCase() === 'picture') {
       normalizedPicture = picture;
     } else {
-      // <img>のみ → <picture>でラップして最適化互換を確保
+      // <img>のみ → <picture>でラップ
       const pic = document.createElement('picture');
       picture.replaceWith(pic);
       pic.append(picture);
@@ -65,45 +63,54 @@ function deriveLabel(cell, link, picture) {
   return (alt && alt.trim()) || linkText || '';
 }
 
-/* 左右の高さ同期：左画像の表示高 -> 右カラム全体、右の各サムネは 30% */
+/* 左右の高さ同期：左画像の表示高 -> 右カラム全体、右の各サムネは等分 */
 function syncHeights(root) {
   const leftImg = root.querySelector('.left-hero img');
   const right = root.querySelector('.right-stack');
-
   if (!leftImg || !right) return;
 
   const set = () => {
     // 表示サイズから計測（CSSスケール後の実高）
     const leftH = leftImg.getBoundingClientRect().height;
-    if (leftH > 0) {
-      right.style.height = `${leftH}px`;
-      const items = right.querySelectorAll('.stack-item');
-      const gap = parseFloat(getComputedStyle(right).gap || '0');
-      const totalGap = gap * Math.max(0, items.length - 1);
-      const each = Math.max(0, (leftH - totalGap) * 0.30); // 指定: 左画像高の30%
-      items.forEach((it) => { it.style.height = `${each}px`; });
-    }
+    if (leftH <= 0) return;
+
+    // 右全体を左と同じ高さに
+    right.style.height = `${leftH}px`;
+
+    // 右の3枚を等分（ギャップを差し引いて均等割り）
+    const items = right.querySelectorAll('.stack-item');
+    const gap = parseFloat(getComputedStyle(right).gap || '0');
+    const totalGap = gap * Math.max(0, items.length - 1);
+    const each = Math.max(60, (leftH - totalGap) / Math.max(1, items.length));
+
+    items.forEach((it) => { it.style.height = `${each}px`; });
   };
 
-  // 画像ロード後・リサイズ時に反映
-  if (leftImg.complete) set();
-  else leftImg.addEventListener('load', set, { once: true });
+  // 初期／ロード後／リサイズで再計算
+  const recalcs = () => { requestAnimationFrame(set); };
 
-  // 右側サムネ画像が後からロードされても縦伸びしないよう高さ固定済み
-  const ro = new ResizeObserver(() => set());
+  if (leftImg.complete) recalcs();
+  leftImg.addEventListener('load', recalcs, { once: true });
+
+  // 画像のソース切替やレイアウト変化にも追従
+  const ro = new ResizeObserver(recalcs);
   ro.observe(leftImg);
-  window.addEventListener('resize', set);
+  window.addEventListener('resize', recalcs);
+
+  // 右側の画像ロードでも一応再同期
+  root.querySelectorAll('.right-stack img').forEach((img) => {
+    if (!img.complete) img.addEventListener('load', recalcs, { once: true });
+  });
 }
 
 export default function decorate(block) {
   // 元の4行1列セルを収集
   const cells = [];
   [...block.children].forEach((row) => {
-    // 1列前提だが安全に全セル走査
     [...row.children].forEach((cell) => cells.push(cell));
   });
 
-  // 1..4枚だけ採用（不足はスキップ）
+  // 1..4枚だけ採用
   const entries = cells.slice(0, 4).map((cell) => {
     const { link, picture } = findLinkAndPicture(cell);
     if (!picture) return null;
@@ -113,24 +120,23 @@ export default function decorate(block) {
     return { href, picture, label };
   }).filter(Boolean);
 
+  if (!entries[0]) {
+    block.textContent = '';
+    return;
+  }
+
   // DOM 再構築
   const layout = document.createElement('div');
   layout.className = 'imagelink-layout';
 
   // 左（1枚目）
-  if (entries[0]) {
-    const left = buildTile({
-      href: entries[0].href,
-      picture: entries[0].picture,
-      label: entries[0].label,
-      extraClass: 'left-hero',
-    });
-    layout.append(left);
-  } else {
-    // 画像が無ければそのまま終了
-    block.textContent = '';
-    return;
-  }
+  const left = buildTile({
+    href: entries[0].href,
+    picture: entries[0].picture,
+    label: entries[0].label,
+    extraClass: 'left-hero',
+  });
+  layout.append(left);
 
   // 右（2..4枚）
   const right = document.createElement('div');

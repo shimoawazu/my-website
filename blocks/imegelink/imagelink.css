@@ -42,34 +42,38 @@
   position: relative;
 }
 
-.block.imagelink .imagelink-thumb,
-.block.imagelink .imagelink-thumb picture,
-.block.imagelink .imagelink-thumb img {
+/* ===== 左ヒーロー（1枚目）: 高さは画像の自然比率に任せる ===== */
+.block.imagelink .left-hero .imagelink-thumb img,
+.block.imagelink .left-hero .imagelink-thumb picture,
+.block.imagelink .left-hero .imagelink-thumb {
   display: block;
   width: 100%;
-  height: 100%;
+  height: auto;      /* ← ここがポイント：左は自動高さ */
+  line-height: 0;
+}
+.block.imagelink .left-hero .imagelink-thumb img {
+  object-fit: cover;
 }
 
-.block.imagelink .imagelink-thumb img {
-  object-fit: cover; /* きれいにトリミング */
-}
-
-/* 左のヒーロー（1行目） */
-.block.imagelink .left-hero {
-  height: auto; /* 画像に合わせる（実高はJS同期で右と一致） */
-}
-
-/* 右のスタック（2–4行目） */
+/* ===== 右スタック（2〜4枚目）: JSが .stack-item に高さ(px)を付与 ===== */
 .block.imagelink .right-stack {
   display: flex;
   flex-direction: column;
   gap: var(--imagelink-gap);
-  /* 高さはJSで左画像に同期 */
+  /* 高さはJSで左と一致させる */
 }
-
 .block.imagelink .right-stack .stack-item {
   flex: 0 0 auto;  /* JSで明示高さを設定 */
-  min-height: 40px; /* 極端な小画面の安全策 */
+  min-height: 60px;
+}
+.block.imagelink .right-stack .stack-item .imagelink-thumb,
+.block.imagelink .right-stack .stack-item .imagelink-thumb picture,
+.block.imagelink .right-stack .stack-item .imagelink-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;     /* ← 右側は「与えられた高さをしっかり埋める」 */
+  line-height: 0;
+  object-fit: cover;
 }
 
 /* ホバー演出（ポインタ環境のみ） */
