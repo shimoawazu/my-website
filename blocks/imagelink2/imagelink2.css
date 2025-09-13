@@ -1,10 +1,9 @@
 /* ===== imagelink2：carouselmini の右横に固定配置（幅は imagelink 右カラムに一致） ===== */
 
-/* JS が生成する横並びラッパ */
 .cm-inline-row {
-  --cm-gap: 16px;      /* 左右のすき間 */
-  --cm-left-w: 640px;  /* carouselmini の幅（JSで上書き） */
-  --cm-right-w: 320px; /* imagelink2 の幅（JSで上書き） */
+  --cm-gap: 16px;      /* carouselmini と imagelink2 の間隔 */
+  --cm-left-w: 640px;  /* 左（carouselmini）幅：JSで上書き */
+  --cm-right-w: 320px; /* 右（imagelink2）幅：JSで上書き */
 
   display: flex;
   align-items: stretch;
@@ -20,12 +19,11 @@
   margin: 0 !important;
 }
 
-/* 右：imagelink2 は imagelink 右カラム幅に固定（右端寄せ） */
+/* 右：imagelink2 は imagelink 右カラム幅に固定 */
 .cm-inline-row > .imagelink2 {
   flex: 0 0 var(--cm-right-w);
   max-width: var(--cm-right-w);
   min-width: 0;
-  margin-left: auto; /* 行の右端へ */
   margin: 0 !important;
 }
 
@@ -35,6 +33,11 @@
   display: flex;
   flex-direction: column;
   gap: var(--i2-gap);
+  box-sizing: border-box;
+
+  /* フォールバック：JS が失敗しても全幅化しない */
+  width: var(--cm-right-w, auto);
+  max-width: var(--cm-right-w, 100%);
 }
 
 .imagelink2 a,
