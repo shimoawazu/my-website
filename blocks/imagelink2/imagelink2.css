@@ -1,14 +1,14 @@
-/* ===== imagelink2 - carousel2 の右横に固定配置 =====
-   - JS が carousel2 と imagelink2 を .imagelink2-pair で横並び化
-   - 右列（imagelink2）の幅: --imagelink2-col-width
-   - 高さ: --imagelink2-height（carousel2 に同期）
+/* ===== imagelink2 - carousel2 の右横に配置、画像高さに同期 =====
+   - JS が .imagelink2-pair を作り、左: carousel2 / 右: imagelink2 に並べます
+   - 高さは --imagelink2-height（= carousel2 で実際に見えている画像の高さ）
+   - 右列の幅は --imagelink2-col-width（JS が計算し注入）
 */
 
-/* 横並び用のラッパー（JSが生成） */
+/* 横並び用ラッパー（JSが生成） */
 .imagelink2-pair {
   display: flex;
   gap: 12px;
-  align-items: stretch;
+  align-items: flex-start;       /* 子どもを上揃え（高さは各自の指定に従う） */
   width: 100%;
 }
 
@@ -17,34 +17,31 @@
 .imagelink2-pair > .carousel,
 .imagelink2-pair > .carouselmini {
   flex: 1 1 0;
-  min-width: 0; /* 横スクロールや画像の収まり向上 */
+  min-width: 0;
 }
 
-/* 右列: imagelink2 自体のカラム幅 */
+/* 右列: imagelink2 のカラム幅 */
 .imagelink2-pair > .imagelink2 {
-  --imagelink2-col-width: 360px;          /* デフォルト列幅（JSが上書き） */
+  --imagelink2-col-width: 360px;   /* デフォルト（JSが上書き） */
   flex: 0 0 var(--imagelink2-col-width);
   width: var(--imagelink2-col-width);
   max-width: 100%;
 }
 
 /* ===== imagelink2 本体 ===== */
-
 .imagelink2 {
   --imagelink2-gap: 12px;
   --imagelink2-radius: 12px;
   --imagelink2-bg: #ffffff;
 
-  /* JS が注入（フォールバックは auto） */
-  width: var(--imagelink2-width, auto);
-  height: var(--imagelink2-height, auto);
+  width: var(--imagelink2-col-width, auto);               /* 幅は列幅で固定 */
+  height: var(--imagelink2-height, auto);                 /* ★ 画像高さに同期（JS注入） */
   box-sizing: border-box;
-
-  /* ラッパーを使わない環境でも右寄せされる保険（無害） */
-  margin-left: auto;
+  min-height: 0;
+  margin-left: auto;                                      /* 単体配置時も右寄せの保険 */
 }
 
-/* 2枚を縦に50%ずつ */
+/* 2枚を縦に 1:1 で並べる（全高を2分割） */
 .imagelink2 .imagelink2-list {
   display: grid;
   grid-template-rows: 1fr 1fr;
@@ -56,14 +53,14 @@
   list-style: none;
 }
 
-/* 各アイテム枠 */
+/* 各アイテム */
 .imagelink2 .imagelink2-item {
   position: relative;
   overflow: hidden;
   background: var(--imagelink2-bg);
   border-radius: var(--imagelink2-radius);
   box-shadow: 0 2px 8px rgba(0 0 0 / 6%);
-  min-height: 120px; /* フォールバック最低高 */
+  min-height: 100px; /* 極端な小画面時の保険 */
 }
 
 /* 画像リンクを全面化 */
@@ -86,7 +83,7 @@
   object-fit: cover;
 }
 
-/* モバイル: 縦積み（上:carousel2、下:imagelink2） */
+/* モバイル: 縦積み（上:carousel、下:imagelink2） */
 @media (max-width: 899.98px) {
   .imagelink2-pair {
     flex-direction: column;
@@ -98,7 +95,6 @@
   .imagelink2 {
     --imagelink2-gap: 8px;
     --imagelink2-radius: 10px;
-    width: 100%;
-    height: auto; /* モバイルは自動高さに */
+    height: auto; /* モバイルは自動高さ */
   }
 }
