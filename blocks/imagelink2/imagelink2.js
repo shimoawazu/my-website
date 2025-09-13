@@ -1,54 +1,70 @@
 /**
  * imagelink2
  * - 高さ：近傍 carouselmini の .carouselmini-frame 実高さに同期（ResizeObserver）
- * - 幅　：近傍 imagelink の右カラム（.imagelink-right）実幅に同期（ResizeObserver）
- * - 配置：見つかった imagelink 右カラムの末尾へ、このブロック要素ごと append
- * - 構造：オーサリング行（縦2行想定）から <ul><li> を生成
+ *         無ければ最初の画像のアスペクト比から自動算出（フォールバック）
+ * - 幅　：近傍 imagelink の右カラム実幅に同期（ResizeObserver）
+ * - 配置：imagelink ブロック（全体）の「直後」にこのブロックを移動
+ *         → 右側画像群の“下”に確実に来る（右カラム内ではない）
+ * - 構造：オーサリング2行 → <ul><li> に変換
  */
 
 function q(sel, root = document) { return root.querySelector(sel); }
 function qa(sel, root = document) { return [...root.querySelectorAll(sel)]; }
 
-/* ==== 近傍の imagelink 右カラムを探す（前方優先） ==== */
-function findImagelinkRightNear(block) {
-  // 1) 前方の兄弟要素を近い順に走査
+/* ==== 近傍の imagelink 右カラム＆ルートを探す ==== */
+function findImagelinkPartsNear(block) {
+  let nearRoot = null;
+  let rightCol = null;
+
+  // 兄弟を近い順に探索して imagelink ルートを掴む
   let node = block.previousElementSibling;
   while (node) {
-    const cand = node.querySelector?.('.imagelink .imagelink-right, .block.imagelink .imagelink-right, .imagelink > div:last-child');
-    if (cand) return cand;
+    const rootCand = node.classList?.contains('imagelink') ? node : node.querySelector?.('.imagelink');
+    if (rootCand) {
+      nearRoot = rootCand;
+      break;
+    }
     node = node.previousElementSibling;
   }
-  // 2) 文書全体の最初の候補
-  return document.querySelector('.block.imagelink .imagelink-right, .imagelink .imagelink-right, .imagelink > div:last-child');
+  if (!nearRoot) {
+    nearRoot = q('.imagelink'); // 最初のもの
+  }
+
+  if (nearRoot) {
+    // 右カラム（実装差異に対応：明示クラス or 最後の子）
+    rightCol =
+      nearRoot.querySelector('.imagelink-right') ||
+      nearRoot.querySelector(':scope > .imagelink__right') ||
+      nearRoot.querySelector(':scope > div:last-child');
+  }
+
+  return { imagelinkRoot: nearRoot, rightCol };
 }
 
-/* ==== 近傍の carouselmini の画像フレームを探す（前方→後方） ==== */
+/* ==== 近傍の carouselmini 画像フレームを探す（前方→後方→全体） ==== */
 function findCarouselMiniFrameNear(block) {
-  // 1) まず前方
   let node = block.previousElementSibling;
   while (node) {
     const cand = node.querySelector?.('.carouselmini .carouselmini-frame');
     if (cand) return cand;
     node = node.previousElementSibling;
   }
-  // 2) 次に後方
   node = block.nextElementSibling;
   while (node) {
     const cand = node.querySelector?.('.carouselmini .carouselmini-frame');
     if (cand) return cand;
     node = node.nextElementSibling;
   }
-  // 3) 全体から
-  return document.querySelector('.carouselmini .carouselmini-frame');
+  return q('.carouselmini .carouselmini-frame');
 }
 
-/* ==== オーサリングのセル -> アイテム化 ==== */
+/* ==== row -> li へ正規化 ==== */
 function normalizeRowToItem(row) {
   const item = document.createElement('li');
   item.className = 'imagelink2-item';
 
   const link = row.querySelector('a[href]');
-  const pic = row.querySelector('picture') || row.querySelector('img');
+  const pic  = row.querySelector('picture') || row.querySelector('img');
 
   if (link) {
     const a = document.createElement('a');
@@ -59,64 +75,88 @@ function normalizeRowToItem(row) {
     if (pic) a.appendChild(pic);
   } else if (pic) {
     const a = document.createElement('a');
-    a.href = '#'; // 画像だけの場合でもレイアウト保持（あとで差し替え可）
+    a.href = '#';
     a.appendChild(pic);
     item.append(a);
   }
-
   return item;
 }
 
-/* ==== 幅・高さの同期 ==== */
+/* ==== 幅・高さの同期（フォールバック含む） ==== */
 function bindSizeSync(block, rightCol, cmFrame) {
   const applyWidth = () => {
-    if (!rightCol) return;
-    const rect = rightCol.getBoundingClientRect();
-    if (rect.width > 0) block.style.setProperty('--imagelink2-width', `${Math.round(rect.width)}px`);
+    // 右カラム幅 or 自分の親幅
+    const base = rightCol || block.parentElement;
+    if (!base) return;
+    const w = Math.round(base.getBoundingClientRect().width);
+    if (w > 0) block.style.setProperty('--imagelink2-width', `${w}px`);
+  };
+
+  const heightFromFrame = () => {
+    if (!cmFrame) return 0;
+    return Math.round(cmFrame.getBoundingClientRect().height);
+  };
+
+  const heightFromFirstImage = () => {
+    const img = q('.imagelink2-item img', block);
+    if (!img) return 0;
+    const w = img.naturalWidth || parseInt(img.getAttribute('width'), 10) || 0;
+    const h = img.naturalHeight || parseInt(img.getAttribute('height'), 10) || 0;
+    if (w > 0 && h > 0) {
+      // ブロック幅に合わせた計算（2分割なので各アイテム高さは半分だが gap 分を加味）
+      const bw = block.getBoundingClientRect().width || w;
+      const gap = parseFloat(getComputedStyle(block).getPropertyValue('--imagelink2-gap')) || 12;
+      const totalH = Math.round((bw * h) / w); // 画像比率で全高
+      return Math.max(120, totalH); // 最低高
+    }
+    return 0;
   };
 
   const applyHeight = () => {
-    if (!cmFrame) return;
-    const h = Math.round(cmFrame.getBoundingClientRect().height);
-    if (h > 0) block.style.setProperty('--imagelink2-height', `${h}px`);
+    let h = heightFromFrame();
+    if (!h || h <= 0) h = heightFromFirstImage();
+    if (h && h > 0) block.style.setProperty('--imagelink2-height', `${h}px`);
   };
 
   // 初期適用
   applyWidth();
   applyHeight();
 
-  // 右カラム幅の監視
+  // 監視（幅/高さ）
   if (rightCol) {
-    const roW = new ResizeObserver(() => applyWidth());
+    const roW = new ResizeObserver(applyWidth);
     roW.observe(rightCol);
+  } else if (block.parentElement) {
+    const roW = new ResizeObserver(applyWidth);
+    roW.observe(block.parentElement);
   }
-
-  // carouselmini 画像高さの監視
   if (cmFrame) {
-    const roH = new ResizeObserver(() => applyHeight());
+    const roH = new ResizeObserver(applyHeight);
     roH.observe(cmFrame);
   }
 
-  // ウィンドウリサイズ
+  // 画像ロード後に再計算（フォールバック用）
+  const anyImg = q('.imagelink2-item img', block);
+  if (anyImg && !anyImg.complete) {
+    anyImg.addEventListener('load', () => { applyWidth(); applyHeight(); }, { once: true });
+  }
+
   window.addEventListener('resize', () => {
     applyWidth();
     applyHeight();
   });
-
-  // 画像ロード後の反映（念のため）
-  const img = cmFrame?.querySelector?.('img');
-  if (img && !img.complete) {
-    img.addEventListener('load', applyHeight, { once: true });
-  }
 }
 
-/* ==== 右カラム末尾へブロックごと移動 ==== */
-function moveBlockIntoRightColumn(block, rightCol) {
-  if (!rightCol || !block || block.parentElement === rightCol) return;
-  rightCol.appendChild(block);
+/* ==== imagelink ブロックの直後に移動（右群の下に置く） ==== */
+function moveBlockAfterImagelink(block, imagelinkRoot) {
+  if (!imagelinkRoot || !imagelinkRoot.parentNode) return;
+  const parent = imagelinkRoot.parentNode;
+  // 既に直後なら何もしない
+  if (block.previousElementSibling === imagelinkRoot) return;
+  parent.insertBefore(block, imagelinkRoot.nextSibling);
 }
 
-/* ==== 軽微な画質系最適化 ==== */
+/* ==== 軽微な画質最適化 ==== */
 function perfTweakImages(root) {
   qa('img', root).forEach((img) => {
     if (!img.getAttribute('loading')) img.setAttribute('loading', 'lazy');
@@ -133,10 +173,8 @@ function perfTweakImages(root) {
 
 /* ==== エントリポイント ==== */
 export default function decorate(block) {
-  // 1) オーサリングの行を収集（2行想定だが冗長でもOK）
+  // 1) オーサリング行 → <ul> に組み替え
   const rows = qa(':scope > div', block);
-
-  // 2) DOM再構築：<ul> に変換
   const list = document.createElement('ul');
   list.className = 'imagelink2-list';
 
@@ -145,19 +183,20 @@ export default function decorate(block) {
     list.appendChild(item);
     row.remove();
   });
-
   block.appendChild(list);
 
-  // 3) 近傍の imagelink右カラム と carouselmini画像 を取得
-  const rightCol = findImagelinkRightNear(block);
+  // 2) 近傍要素の取得
+  const { imagelinkRoot, rightCol } = findImagelinkPartsNear(block);
   const cmFrame = findCarouselMiniFrameNear(block);
 
-  // 4) ブロックを右カラムの直下に移動（配置要件）
-  if (rightCol) moveBlockIntoRightColumn(block, rightCol);
+  // 3) imagelink ブロックの直後に移動（＝右側画像の“下”）
+  if (imagelinkRoot) {
+    moveBlockAfterImagelink(block, imagelinkRoot);
+  }
 
-  // 5) 幅（右カラム）・高さ（carouselmini画像）に同期
+  // 4) サイズ同期（幅=右カラム or 親、 高さ=carouselmini or フォールバック）
   bindSizeSync(block, rightCol, cmFrame);
 
-  // 6) 画質周りの軽微調整
+  // 5) 画質まわり
   perfTweakImages(block);
 }

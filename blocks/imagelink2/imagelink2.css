@@ -1,7 +1,7 @@
 /* ===== imagelink2 =====
-   ・高さ：carouselmini の画像高さに同期（JSが --imagelink2-height を注入）
-   ・幅　：imagelink の右カラム幅に同期（JSが --imagelink2-width を注入）
-   ・配置：JS側で imagelink 右カラムの直下にブロックを移動して挿入
+   ・高さ：carouselmini の画像高さに同期（JSが --imagelink2-height 注入）
+   ・幅　：imagelink の右カラム幅に同期（JSが --imagelink2-width 注入）
+   ・配置：JS側で imagelink ブロックの直後（右カラムの下に相当）へ移動
    ・内容：画像リンク2枚を縦に50%ずつ（gapあり）
 */
 
@@ -10,11 +10,11 @@
   --imagelink2-radius: 12px;
   --imagelink2-bg: #ffffff;
 
-  /* JSが注入。無ければ100%/auto */
-  width: var(--imagelink2-width, 100%);
+  /* JS注入がなければ自然幅/auto で表示（フォールバック） */
+  width: var(--imagelink2-width, auto);
   height: var(--imagelink2-height, auto);
 
-  /* 右カラムと少し離す */
+  /* imagelink から少し離す */
   margin-top: 12px;
 }
 
@@ -37,6 +37,7 @@
   background: var(--imagelink2-bg);
   border-radius: var(--imagelink2-radius);
   box-shadow: 0 2px 8px rgba(0 0 0 / 6%);
+  min-height: 120px; /* 高さ同期がない環境でも見える保険 */
 }
 
 /* 画像リンクが枠いっぱいに広がる */
