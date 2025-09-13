@@ -1,76 +1,120 @@
-/* ===== carouselmini =====
-   ・幅：imagelink 左ヒーローに追従（JSが --carouselmini-width 注入）
-   ・比率：左ヒーローに追従（--hero-ratio 注入、無ければ 16/9）
-   ・表示：PC=3 / Tablet=2 / Mobile=1
-   ・自動再生：3秒ごとに「1画像」ずつ。末尾の後ろに元画像を丸ごとクローン連結し、連続表示
-   ・ドット：元画像数ぶん。左端に表示されている画像（クローン含む）に対応して⚫︎が移動
+/* ===== carouselmini (left: slider, right: 2 image links) =====
+   - 左: 最後の2枚を除いたスライドのみでカルーセル
+   - 右: 最後の2枚を縦に2分割で表示（画像リンク）
+   - 幅:   --cm-left-w  = imagelink 左の大きい画像の実幅（JSが注入）
+           --cm-right-w = imagelink 右の小さい画像列の実幅（JSが注入）
+   - 高さ: --cm-height = 左の表示中スライド画像の実高さ（JSが注入）
 */
 
 .carouselmini {
-  --carouselmini-gap: 12px;
-  --carouselmini-radius: 12px;
-  --carouselmini-bg: #ffffff;
-
-  /* ドット（◯/⚫︎） */
-  --carouselmini-dot-size: 10px;
-  --carouselmini-dot-color: #bdbdbd;   /* 非アクティブの枠色（◯） */
-  --carouselmini-dot-active: #333333;  /* アクティブの塗り（⚫︎） */
-
-  /* imagelink 左ヒーロー幅（JS注入）。無ければ100% */
-  width: var(--carouselmini-width, 100%);
-  max-width: 100%;
-  margin: 0;
+  --cm-gap: 12px;
+  --cm-radius: 12px;
+  --cm-left-w: 640px;      /* フォールバック（JSが上書き） */
+  --cm-right-w: 360px;     /* フォールバック（JSが上書き） */
+  --cm-height: auto;       /* JSが実高さ注入 */
 }
 
-/* ビューポート */
+/* 横並び用の内部ラッパー（JSが生成） */
+.carouselmini .carouselmini-pair {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--cm-gap);
+  width: 100%;
+}
+
+/* 左列: カルーセル領域（幅は imagelink 左列に同期） */
+.carouselmini .carouselmini-left {
+  flex: 0 0 var(--cm-left-w);
+  width: var(--cm-left-w);
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* ビューポート（高さは自動。右列はこの実高さに同期） */
 .carouselmini .carouselmini-viewport {
   position: relative;
   overflow: hidden;
-}
-
-/* 横スクロールの土台 */
-.carouselmini .carouselmini-slides {
-  display: flex;
-  gap: var(--carouselmini-gap);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-
-  scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-}
-
-/* スクロールバー隠し（WebKit） */
-.carouselmini .carouselmini-slides::-webkit-scrollbar { display: none; }
-
-/* 列数（ブレークポイント） */
-.carouselmini { --carouselmini-cols: 1; }
-@media (min-width: 600px) { .carouselmini { --carouselmini-cols: 2; } }
-@media (min-width: 900px) { .carouselmini { --carouselmini-cols: 3; } }
-
-/* アイテム幅を等分（gap考慮） */
-.carouselmini .carouselmini-item {
-  flex: 0 0 calc(
-    (100% - (var(--carouselmini-gap) * (var(--carouselmini-cols) - 1)))
-    / var(--carouselmini-cols)
-  );
-  scroll-snap-align: start;
-}
-
-/* カード（比率はimagelink左ヒーローに追従。無い場合16:9） */
-.carouselmini .carouselmini-frame {
-  position: relative;
   width: 100%;
-  aspect-ratio: var(--hero-ratio, 16/9);
-  background: var(--carouselmini-bg);
-  border-radius: var(--carouselmini-radius);
-  overflow: hidden;
+  border-radius: var(--cm-radius);
+  background: #fff;
   box-shadow: 0 2px 8px rgba(0 0 0 / 6%);
 }
 
-.carouselmini .carouselmini-frame a {
+/* トラック：横方向にスライド */
+.carouselmini .carouselmini-track {
+  display: flex;
+  height: 100%;
+  will-change: transform;
+  transition: transform 400ms ease;
+}
+
+/* スライド：幅100%（左列幅に追従） */
+.carouselmini .carouselmini-slide {
+  flex: 0 0 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.carouselmini .carouselmini-slide picture,
+.carouselmini .carouselmini-slide img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.carouselmini .carouselmini-slide img {
+  object-fit: cover; /* 画面いっぱいに見せる */
+}
+
+/* インジケーター */
+.carouselmini .carouselmini-indicators {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 0 0;
+  margin: 0;
+  list-style: none;
+}
+
+.carouselmini .carouselmini-indicators button {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: #d0d0d0;
+  cursor: pointer;
+}
+
+.carouselmini .carouselmini-indicators button[aria-current="true"] {
+  background: #111;
+}
+
+/* 右列：最後の2枚（画像リンク）を縦2分割で表示。高さは左の実高さに同期 */
+.carouselmini .carouselmini-right {
+  flex: 0 0 var(--cm-right-w);
+  width: var(--cm-right-w);
+  max-width: 100%;
+  height: var(--cm-height);
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: var(--cm-gap);
+  min-height: 120px; /* 予防 */
+}
+
+/* 各リンクカード */
+.carouselmini .carouselmini-link {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--cm-radius);
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0 0 0 / 6%);
+}
+
+.carouselmini .carouselmini-link > a {
   display: block;
   width: 100%;
   height: 100%;
@@ -78,98 +122,56 @@
   text-decoration: none;
 }
 
-.carouselmini .carouselmini-frame picture,
-.carouselmini .carouselmini-frame img {
+.carouselmini .carouselmini-link picture,
+.carouselmini .carouselmini-link img {
   display: block;
   width: 100%;
   height: 100%;
 }
 
-.carouselmini .carouselmini-frame img {
+.carouselmini .carouselmini-link img {
   object-fit: cover;
 }
 
-/* ナビ（左右） */
+/* ナビボタン（必要なら表示。デフォ非表示） */
 .carouselmini .carouselmini-nav {
+  display: none;
   position: absolute;
-  inset: 0;
-  pointer-events: none;
+  z-index: 2;
+  inset: 0 0 auto 0;
+  height: 0;
 }
 
-.carouselmini .carouselmini-nav button {
-  pointer-events: auto;
+.carouselmini .carouselmini-nav .btn {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   border: 0;
-  margin: 0;
-  padding: 0;
-  background-color: rgba(19 19 19 / 25%);
-  transition: background-color .2s;
+  background: rgba(17 17 17 / 35%);
   cursor: pointer;
 }
 
-.carouselmini .carouselmini-nav button:hover,
-.carouselmini .carouselmini-nav button:focus-visible {
-  background-color: rgba(19 19 19 / 75%);
+.carouselmini .carouselmini-nav .btn:hover {
+  background: rgba(17 17 17 / 65%);
 }
 
 .carouselmini .carouselmini-nav .prev { left: 8px; }
 .carouselmini .carouselmini-nav .next { right: 8px; }
 
-.carouselmini .carouselmini-nav button::after {
-  display: block;
-  content: '';
-  border: 2px solid #fff;
-  border-bottom: 0;
-  border-left: 0;
-  height: 12px;
-  width: 12px;
-  position: absolute;
-  top: 50%;
-  left: calc(50% + 2px);
-  transform: translate(-50%, -50%) rotate(-135deg);
+/* モバイルは縦積み（上：カルーセル／下：リンク2枚） */
+@media (max-width: 899.98px) {
+  .carouselmini .carouselmini-pair {
+    flex-direction: column;
+  }
+  .carouselmini .carouselmini-left,
+  .carouselmini .carouselmini-right {
+    width: 100%;
+    flex-basis: auto;
+  }
+  .carouselmini .carouselmini-right {
+    height: auto; /* モバイルは自動高さ */
+  }
 }
-.carouselmini .carouselmini-nav .next::after {
-  transform: translate(-50%, -50%) rotate(45deg);
-  left: calc(50% - 2px);
-}
-
-/* ===== ドット（画像数ぶん、◯/⚫︎スタイル） ===== */
-.carouselmini .carouselmini-indicators {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  margin-top: 10px;
-  line-height: 0;
-}
-
-.carouselmini .carouselmini-indicators button {
-  width: var(--carouselmini-dot-size);
-  height: var(--carouselmini-dot-size);
-  border-radius: 50%;
-  border: 2px solid var(--carouselmini-dot-color);
-  background: transparent; /* ◯ */
-  padding: 0;
-  cursor: pointer;
-}
-
-.carouselmini .carouselmini-indicators button[aria-current="true"] {
-  background: var(--carouselmini-dot-active); /* ⚫︎ */
-  border-color: var(--carouselmini-dot-active);
-}
-
-/* 視覚非表示の進捗テキスト（必要なら display: inline-block に） */
-.carouselmini .carouselmini-status {
-  margin-left: 8px;
-  font-size: 12px;
-  color: #666;
-  display: none;
-}
-
-/* ブロック余白 */
-.carouselmini { margin-block: 16px; }

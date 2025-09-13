@@ -1,351 +1,320 @@
 /**
  * carouselmini
- * - 幅：imagelink 左ヒーローに追従（--carouselmini-width）
- * - 比率：imagelink 左ヒーローに追従（--hero-ratio、無ければ16/9）
- * - 可視列：PC=3 / Tablet=2 / Mobile=1（CSS変数）
- * - 自動再生：3秒ごとに「1画像」ずつ。末尾の後ろに元画像をフルでクローンし連結。
- *              リスト末尾を超える次ステップでは「next - N」へ瞬時ジャンプして連続表示を維持
- * - ドット：元画像枚数ぶん。左端に表示中の画像（クローン含む）に合わせて⚫︎を移動
+ * - ブロック内の行（div）から最後の2行を「画像リンク」列へ、残りを「スライド」へ変換
+ * - カルーセルは最後の2行を除いたスライドのみで自動再生（3秒）、無限ループ
+ * - 幅は imagelink の左（大）/右（小）の実幅に同期（ResizeObserver）
+ * - 高さは左スライドで「実際に見えている画像の高さ」を取得し、右列に同期
  */
 
 function q(sel, root = document) { return root.querySelector(sel); }
 function qa(sel, root = document) { return [...root.querySelectorAll(sel)]; }
+const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 
-/* ===== オーサリングセル → アイテム変換 ===== */
-function normalizeCellToItem(cell) {
-  const item = document.createElement('li');
-  item.className = 'carouselmini-item';
-
-  const frame = document.createElement('div');
-  frame.className = 'carouselmini-frame';
-
-  const anchor = cell.querySelector('a[href]');
-  const pic = cell.querySelector('picture') || cell.querySelector('img');
-
-  if (anchor) {
-    const a = document.createElement('a');
-    a.href = anchor.getAttribute('href');
-    const label = anchor.getAttribute('aria-label') || anchor.textContent?.trim() || '';
-    if (label) a.setAttribute('aria-label', label);
-    frame.append(a);
-    if (pic) a.appendChild(pic);
-  } else if (pic) {
-    frame.appendChild(pic);
-  }
-
-  item.append(frame);
-  return item;
+/* ===== imagelink 近傍の列幅を取得 ===== */
+function findImagelinkNear(block) {
+  // 近傍の兄弟方向に走査 → 全体
+  const pick = (node) => node?.classList?.contains('imagelink') ? node : node?.querySelector?.('.imagelink');
+  let n = block.previousElementSibling;
+  while (n) { const r = pick(n); if (r) return r; n = n.previousElementSibling; }
+  n = block.nextElementSibling;
+  while (n) { const r = pick(n); if (r) return r; n = n.nextElementSibling; }
+  return q('.imagelink');
 }
 
-/* ===== imagelink 左ヒーロー探索（近傍優先） ===== */
-function findImagelinkLeftNear(block) {
-  let node = block.previousElementSibling;
-  while (node) {
-    const cand = node.querySelector?.(
-      '.block.imagelink .imagelink-left, .imagelink .imagelink-left, .imagelink > div:first-child'
-    );
-    if (cand) return cand;
-    node = node.previousElementSibling;
-  }
-  return document.querySelector(
-    '.block.imagelink .imagelink-left, .imagelink .imagelink-left, .imagelink > div:first-child'
-  );
+function measureColumnsFromImagelink(root) {
+  if (!root) return { left: 0, right: 0 };
+  // 左 = 最初の子、右 = 最後の子（右列の1枚分の実幅とみなす）
+  const leftCol = root.querySelector(':scope > div:first-child') || root.firstElementChild;
+  const rightAny = root.querySelector(':scope > div:last-child') || root.lastElementChild;
+  const left = Math.round(leftCol?.getBoundingClientRect().width || 0);
+  const right = Math.round(rightAny?.getBoundingClientRect().width || 0);
+  return { left, right };
 }
 
-/* ===== imagelink 同期（幅・比率） ===== */
-function bindImagelinkSync(block) {
-  const el = findImagelinkLeftNear(block);
-  if (!el) return;
-
-  const applyWidth = () => {
-    const rect = el.getBoundingClientRect();
-    if (rect.width > 0) block.style.setProperty('--carouselmini-width', `${Math.round(rect.width)}px`);
-  };
-  const applyRatio = () => {
-    const img = el.querySelector('img');
-    if (!img) return;
-    const w = Number(img.getAttribute('width')) || img.naturalWidth || 0;
-    const h = Number(img.getAttribute('height')) || img.naturalHeight || 0;
-    if (w > 0 && h > 0) block.style.setProperty('--hero-ratio', (w / h).toString());
-  };
-
-  // 初期適用
-  applyWidth(); applyRatio();
-
-  // リサイズ追従
-  const ro = new ResizeObserver(applyWidth);
-  ro.observe(el);
-
-  // ヒーロー画像ロード後にも追従
-  const heroImg = el.querySelector('img');
-  if (heroImg && !heroImg.complete) {
-    heroImg.addEventListener('load', () => { applyWidth(); applyRatio(); }, { once: true });
-  }
-
-  window.addEventListener('resize', applyWidth);
+/* ===== “可視中”のスライド内画像を特定 ===== */
+function isVisible(el) {
+  if (!el) return false;
+  const r = el.getBoundingClientRect();
+  return r.width > 0 && r.height > 0 && r.bottom > 0 && r.right > 0;
+}
+function currentVisibleImg(leftRoot) {
+  // 現在表示中スライドの img を拾う
+  const img = leftRoot.querySelector('.carouselmini-slide--active img') ||
+              leftRoot.querySelector('.carouselmini-slide picture > img') ||
+              leftRoot.querySelector('.carouselmini-slide img');
+  return img && isVisible(img) ? img : img; // 候補があれば返す
 }
 
-/* ===== レイアウト数値 ===== */
-function getCols(block) {
-  const s = getComputedStyle(block);
-  const cols = parseFloat(s.getPropertyValue('--carouselmini-cols')) || 1;
-  return Math.max(1, Math.round(cols));
+/* ===== 行を Slide / Link に正規化 ===== */
+function makeSlideFromRow(row) {
+  const slide = document.createElement('div');
+  slide.className = 'carouselmini-slide';
+  const pic = row.querySelector('picture') || row.querySelector('img');
+  if (pic) slide.appendChild(pic);
+  return slide;
 }
 
-function getStepWidth(block) {
-  const scroller = q('.carouselmini-slides', block);
-  const items = scroller ? qa('.carouselmini-item', scroller) : [];
-  if (!scroller || items.length === 0) return 0;
-  if (items.length >= 2) return items[1].offsetLeft - items[0].offsetLeft; // gap込み
-  return items[0].getBoundingClientRect().width;
+function makeLinkFromRow(row) {
+  const linkWrap = document.createElement('div');
+  linkWrap.className = 'carouselmini-link';
+  const aSrc = row.querySelector('a[href]');
+  const pic = row.querySelector('picture') || row.querySelector('img');
+  const a = document.createElement('a');
+  a.href = aSrc ? aSrc.getAttribute('href') : '#';
+  const label = aSrc?.getAttribute('aria-label') || aSrc?.textContent?.trim();
+  if (label) a.setAttribute('aria-label', label);
+  if (pic) a.appendChild(pic);
+  linkWrap.appendChild(a);
+  return linkWrap;
 }
 
-function getCurrentIndex(block) {
-  const scroller = q('.carouselmini-slides', block);
-  const step = getStepWidth(block) || scroller?.clientWidth || 1;
-  return Math.round((scroller?.scrollLeft || 0) / step);
-}
-
-/* totalItems にはクローンを含む。maxIndex は「左端として成立する最大インデックス」 */
-function getMaxIndex(block) {
-  const scroller = q('.carouselmini-slides', block);
-  const totalItems = scroller ? scroller.children.length : 0;
-  const cols = getCols(block);
-  return Math.max(0, totalItems - cols);
-}
-
-function scrollToIndex(block, idx, behavior = 'smooth') {
-  const scroller = q('.carouselmini-slides', block);
-  if (!scroller) return;
-  const maxIdx = getMaxIndex(block);
-  const target = Math.max(0, Math.min(maxIdx, idx));
-  const step = getStepWidth(block) || scroller.clientWidth;
-  scroller.scrollTo({ left: target * step, top: 0, behavior });
-  updateIndicators(block, target); // ドット更新
-}
-
-/* ===== ドット（元画像数ぶん） ===== */
-function buildIndicators(block) {
-  let wrap = q('.carouselmini-indicators', block);
-  if (!wrap) {
-    wrap = document.createElement('div');
-    wrap.className = 'carouselmini-indicators';
-    const status = document.createElement('span');
-    status.className = 'carouselmini-status';
-    status.setAttribute('aria-live', 'polite');
-    wrap.append(status);
-    block.append(wrap);
-  }
-
-  // 既存ボタンをクリア（statusは残す）
-  qa('button', wrap).forEach((b) => b.remove());
-
-  const totalOriginal = block._cmOriginal || 0;
-  for (let i = 0; i < totalOriginal; i += 1) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.setAttribute('aria-label', `画像 ${i + 1} / ${totalOriginal} を表示`);
-    btn.addEventListener('click', () => scrollToIndex(block, i));
-    wrap.insertBefore(btn, q('.carouselmini-status', wrap));
-  }
-
-  updateIndicators(block, getCurrentIndex(block));
-}
-
-/* 左端インデックス → ドットのインデックス（元画像スケール、単純な modulo） */
-function mapIndexToDot(currentIdx, totalOriginal) {
-  if (totalOriginal <= 0) return 0;
-  return currentIdx % totalOriginal; // クローン含め、常に元画像番号へ正規化
-}
-
-function updateIndicators(block, currentIdx) {
-  const wrap = q('.carouselmini-indicators', block);
-  if (!wrap) return;
-
-  const totalOriginal = block._cmOriginal || 0;
-  const btns = qa('button', wrap);
-  const dotIdx = mapIndexToDot(currentIdx, totalOriginal);
-
-  btns.forEach((b, i) => {
-    if (i === dotIdx) b.setAttribute('aria-current', 'true');
-    else b.removeAttribute('aria-current');
-  });
-
-  const status = q('.carouselmini-status', wrap);
-  if (status) status.textContent = `${dotIdx + 1} / ${totalOriginal}`;
-}
-
-/* ===== スクロール追従（ドット更新） ===== */
-function bindScrollUpdate(block) {
-  const scroller = q('.carouselmini-slides', block);
-  if (!scroller) return;
-
-  let raf = 0;
-  const onScroll = () => {
-    if (raf) return;
-    raf = requestAnimationFrame(() => {
-      raf = 0;
-      updateIndicators(block, getCurrentIndex(block));
-    });
-  };
-  scroller.addEventListener('scroll', onScroll);
-
-  // リサイズでステップ幅/列数が変わる → 再構築＆現在地へスナップ
-  const ro = new ResizeObserver(() => {
-    const curr = getCurrentIndex(block);
-    buildIndicators(block);
-    scrollToIndex(block, curr, 'auto');
-  });
-  ro.observe(block);
-}
-
-/* ===== オートプレイ（1枚ずつ。末尾を超える次は next - N に瞬時ジャンプして連続表示） ===== */
-function startAutoplay(block, intervalMs = 3000) {
-  const scroller = q('.carouselmini-slides', block);
-  if (!scroller) return;
-
-  const totalOriginal = block._cmOriginal || 0;
-  const totalItems = scroller.children.length; // クローン込み
-  if (totalOriginal <= 1 || totalItems <= 1) return;
-
-  if (block._carouselminiTimer) clearInterval(block._carouselminiTimer);
-
-  block._carouselminiTimer = setInterval(() => {
-    const curr = getCurrentIndex(block);
-    const maxIdx = getMaxIndex(block);
-    const next = curr + 1;
-
-    if (next > maxIdx) {
-      // 末尾のさらに1つ先（理想の連続表示位置）に相当する original 側のインデックスへ瞬時ジャンプ
-      const N = totalOriginal;
-      scrollToIndex(block, next - N, 'auto');
-    } else {
-      scrollToIndex(block, next);
-    }
-  }, intervalMs);
-
-  const stop = () => {
-    if (block._carouselminiTimer) clearInterval(block._carouselminiTimer);
-    block._carouselminiTimer = null;
-  };
-  const resume = () => {
-    if (!block._carouselminiTimer) startAutoplay(block, intervalMs);
-  };
-
-  // ユーザー操作で一時停止／離れたら再開
-  ['mouseenter', 'focusin', 'touchstart', 'pointerdown'].forEach((ev) => {
-    block.addEventListener(ev, stop);
-    scroller.addEventListener(ev, stop);
-  });
-  ['mouseleave', 'focusout'].forEach((ev) => {
-    block.addEventListener(ev, resume);
-    scroller.addEventListener(ev, resume);
-  });
-}
-
-/* ===== 前後ボタン（1枚ずつ。末尾→ next - N へ瞬時ジャンプ / 先頭← N - cols へ） ===== */
-function bindNavButtons(block) {
-  const prev = q('.carouselmini-nav .prev', block);
-  const next = q('.carouselmini-nav .next', block);
-  const scroller = q('.carouselmini-slides', block);
-  if (!scroller) return;
-
-  const totalOriginal = block._cmOriginal || 0;
-
-  if (prev) {
-    prev.addEventListener('click', () => {
-      const curr = getCurrentIndex(block);
-      let target = curr - 1;
-      if (target < 0) {
-        // 先頭から戻る → original の末尾スタートへ瞬時ジャンプ
-        target = Math.max(0, totalOriginal - getCols(block));
-        scrollToIndex(block, target, 'auto');
-      } else {
-        scrollToIndex(block, target);
-      }
-    });
-  }
-
-  if (next) {
-    next.addEventListener('click', () => {
-      const curr = getCurrentIndex(block);
-      const maxIdx = getMaxIndex(block);
-      const t = curr + 1;
-      if (t > maxIdx) {
-        // 末尾のさらに先 → next - N へ瞬時ジャンプ
-        scrollToIndex(block, t - totalOriginal, 'auto');
-      } else {
-        scrollToIndex(block, t);
-      }
-    });
-  }
-}
-
-/* ===== 初期化をレイアウト確定後に実行（画像ロード前の0幅対策） ===== */
-function initAfterLayout(block, fn) {
-  requestAnimationFrame(() => requestAnimationFrame(fn));
-}
-
-/* ===== エントリポイント ===== */
-export default function decorate(block) {
-  // オーサリングの行/セル → アイテム化
-  const cells = [];
-  [...block.children].forEach((row) => { [...row.children].forEach((cell) => cells.push(cell)); });
-  const originals = cells.map((cell) => normalizeCellToItem(cell));
-
-  // 元画像枚数を保存（ドットはこの数で作る）
-  const totalOriginal = originals.length;
-  block._cmOriginal = totalOriginal;
-
-  // DOM構築
-  const viewport = document.createElement('div');
-  viewport.className = 'carouselmini-viewport';
-
-  const list = document.createElement('ul');
-  list.className = 'carouselmini-slides';
-
-  // 元画像を追加
-  originals.forEach((it) => list.appendChild(it));
-
-  // 末尾に「元画像を丸ごとクローン」して連結（1→2→…→N→1'→2'→…→N'）
-  for (let i = 0; i < totalOriginal; i += 1) {
-    const clone = originals[i].cloneNode(true);
-    list.appendChild(clone);
-  }
-
-  const nav = document.createElement('div');
-  nav.className = 'carouselmini-nav';
-  nav.innerHTML = `
-    <button type="button" class="prev" aria-label="前へ"></button>
-    <button type="button" class="next" aria-label="次へ"></button>
-  `;
-
-  // 置換
-  block.textContent = '';
-  viewport.append(list, nav);
-  block.append(viewport);
-
-  // imagelink 同期（幅・比率）
-  bindImagelinkSync(block);
-
-  // 画像の軽量属性 & typo補正（webply → webp）
-  qa('img', block).forEach((img) => {
+function perfTweakImages(root) {
+  qa('img', root).forEach((img) => {
     if (!img.getAttribute('loading')) img.setAttribute('loading', 'lazy');
     if (!img.getAttribute('decoding')) img.setAttribute('decoding', 'async');
   });
-  qa('source[srcset], img[src]', block).forEach((el) => {
+  qa('source[srcset], img[src]', root).forEach((el) => {
     const attr = el.tagName === 'SOURCE' ? 'srcset' : 'src';
-    const val = el.getAttribute(attr);
-    if (val && val.includes('format=webply')) {
-      el.setAttribute(attr, val.replace(/format=webply/g, 'format=webp'));
+    const v = el.getAttribute(attr);
+    if (v && v.includes('format=webply')) el.setAttribute(attr, v.replace(/format=webply/g, 'format=webp'));
+  });
+}
+
+/* ===== スライダー（無限ループ：クローン方式） ===== */
+function buildInfiniteTrack(track, slides) {
+  // 先頭末尾にクローンを追加
+  const first = slides[0].cloneNode(true);
+  const last  = slides[slides.length - 1].cloneNode(true);
+  track.appendChild(first);                           // 末尾クローン（先頭）
+  track.insertBefore(last, track.firstChild);         // 先頭クローン（末尾）
+  return { headClone: last, tailClone: first };
+}
+
+function setActiveSlideState(leftRoot, indexReal, total) {
+  // indexReal: 0..total-1（実スライド番号）
+  qa('.carouselmini-slide', leftRoot).forEach((s) => s.classList.remove('carouselmini-slide--active'));
+  const slidesOnly = qa('.carouselmini-track > .carouselmini-slide', leftRoot)
+    .filter((_, i, arr) => i !== 0 && i !== arr.length - 1); // クローン除外
+  const active = slidesOnly[indexReal];
+  if (active) active.classList.add('carouselmini-slide--active');
+
+  // インジケーター
+  qa('.carouselmini-indicators button', leftRoot).forEach((b, i) => {
+    b.setAttribute('aria-current', i === indexReal ? 'true' : 'false');
+  });
+}
+
+function startAutoplay(ctx, intervalMs = 3000) {
+  const { leftRoot } = ctx;
+  const stop = () => { if (ctx.timer) clearInterval(ctx.timer); ctx.timer = null; };
+  const go = () => {
+    stop();
+    ctx.timer = setInterval(() => ctx.goto(ctx.index + 1), intervalMs);
+  };
+  leftRoot.addEventListener('mouseenter', stop);
+  leftRoot.addEventListener('focusin', stop);
+  leftRoot.addEventListener('mouseleave', go);
+  leftRoot.addEventListener('focusout', go);
+  go();
+  ctx.stop = stop;
+  ctx.go = go;
+}
+
+/* ===== メイン ===== */
+export default function decorate(block) {
+  const rows = qa(':scope > div', block);
+  if (rows.length === 0) return;
+
+  // 分割：最後の2行をリンク、残りをスライド
+  const linkCount = Math.min(2, rows.length);
+  const linkRows = rows.slice(-linkCount);
+  const slideRows = rows.slice(0, rows.length - linkCount);
+
+  // ベース構造
+  const pair = document.createElement('div');
+  pair.className = 'carouselmini-pair';
+
+  const leftRoot = document.createElement('div');
+  leftRoot.className = 'carouselmini-left';
+  const viewport = document.createElement('div');
+  viewport.className = 'carouselmini-viewport';
+  const track = document.createElement('div');
+  track.className = 'carouselmini-track';
+  viewport.appendChild(track);
+  leftRoot.appendChild(viewport);
+
+  const indicators = document.createElement('ol');
+  indicators.className = 'carouselmini-indicators';
+  leftRoot.appendChild(indicators);
+
+  const rightRoot = document.createElement('div');
+  rightRoot.className = 'carouselmini-right';
+
+  pair.appendChild(leftRoot);
+  pair.appendChild(rightRoot);
+
+  // 既存の行を取り外してからペアを入れる
+  rows.forEach((r) => r.remove());
+  block.appendChild(pair);
+
+  // スライド生成（最後の2枚を除く）
+  const slides = slideRows.map((r) => makeSlideFromRow(r));
+  slides.forEach((s) => track.appendChild(s));
+
+  // リンク生成（最後の2枚）
+  const links = linkRows.map((r) => makeLinkFromRow(r));
+  links.forEach((l) => rightRoot.appendChild(l));
+
+  // 画像の軽微最適化
+  perfTweakImages(block);
+
+  // スライドが1枚以下ならカルーセルせず終了（インジケータ非表示）
+  if (slides.length <= 1) {
+    indicators.style.display = 'none';
+  }
+
+  // 無限ループ準備（クローン追加）
+  let headClone, tailClone;
+  if (slides.length >= 1) {
+    const clones = buildInfiniteTrack(track, slides);
+    headClone = clones.headClone; // 先頭側にある「末尾クローン」
+    tailClone = clones.tailClone; // 末尾側にある「先頭クローン」
+  }
+
+  // インジケーター
+  for (let i = 0; i < slides.length; i += 1) {
+    const liBtn = document.createElement('li');
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.setAttribute('aria-label', `Show slide ${i + 1}`);
+    btn.addEventListener('click', () => ctx.goto(i));
+    liBtn.appendChild(btn);
+    indicators.appendChild(liBtn);
+  }
+
+  // ステート
+  const ctx = {
+    block,
+    leftRoot,
+    viewport,
+    track,
+    slides,
+    total: slides.length,
+    index: 0, // 実スライドのインデックス（0..total-1）
+    widthPx: 0,
+    moving: false,
+    goto: (toIndex) => {
+      if (ctx.total === 0) return;
+      const dir = toIndex > ctx.index ? 1 : -1;
+      const targetReal = ((toIndex % ctx.total) + ctx.total) % ctx.total; // 0..total-1
+      ctx.index = targetReal;
+
+      // 表示位置（クローンを含むトラック上の実インデックス）= real+1
+      const trackIndex = targetReal + 1;
+      ctx.moving = true;
+      ctx.track.style.transition = 'transform 400ms ease';
+      ctx.track.style.transform = `translateX(-${trackIndex * 100}%)`;
+      setActiveSlideState(leftRoot, ctx.index, ctx.total);
+    },
+  };
+
+  // 初期位置：クローン分 1枚分左へ（= 最初の実スライド）
+  if (slides.length >= 1) {
+    ctx.track.style.transform = 'translateX(-100%)';
+    setActiveSlideState(leftRoot, ctx.index, ctx.total);
+  }
+
+  // 無限ループ調整（transitionendでクローン越えを即座に巻き戻し）
+  ctx.track.addEventListener('transitionend', () => {
+    if (!ctx.moving || ctx.total === 0) return;
+    ctx.moving = false;
+
+    const matrices = getComputedStyle(ctx.track).transform;
+    // 現在の可視スライドを推定（% ベースなので index で判断）
+    // クローン端の時に巻き戻し
+    // 左端（先頭クローン表示中）に来た場合
+    const atHeadClone = ctx.index === ctx.total - 1 && headClone && isVisible(headClone);
+    // 右端（末尾クローン表示中）に来た場合
+    const atTailClone = ctx.index === 0 && tailClone && isVisible(tailClone);
+
+    if (atHeadClone) {
+      // 本当の最後の実スライド位置へジャンプ（transition無効）
+      ctx.track.style.transition = 'none';
+      ctx.track.style.transform = `translateX(-${ctx.total * 100}%)`;
+      // 強制再描画
+      void ctx.track.offsetHeight; // eslint-disable-line no-unused-expressions
+      ctx.track.style.transition = 'transform 400ms ease';
+    } else if (atTailClone) {
+      ctx.track.style.transition = 'none';
+      ctx.track.style.transform = 'translateX(-100%)';
+      void ctx.track.offsetHeight;
+      ctx.track.style.transition = 'transform 400ms ease';
     }
   });
 
-  // レイアウト確定後に各種バインド
-  initAfterLayout(block, () => {
-    buildIndicators(block);     // ドット＝元画像数
-    bindScrollUpdate(block);    // スクロールでドット更新
-    bindNavButtons(block);      // 前後ボタン（1枚ずつ）
-    startAutoplay(block, 3000); // ★ 3秒ごとに1枚送り（ …N → 1' → 2' → … → ジャンプして 1 → 2…）
+  // 自動再生（3秒）
+  if (slides.length >= 2) {
+    startAutoplay(ctx, 3000);
+  }
+
+  /* ==== 幅・高さの同期 ==== */
+  const imagelink = findImagelinkNear(block);
+
+  const applyWidths = () => {
+    // imagelink から幅を拾う（無ければ親幅から比率計算）
+    let { left, right } = measureColumnsFromImagelink(imagelink);
+    const wrapW = block.getBoundingClientRect().width || window.innerWidth;
+
+    if (!left && !right) {
+      left = Math.round(wrapW * 0.65);
+      right = Math.round(wrapW * 0.35);
+    } else if (!left && right) {
+      left = Math.max(280, Math.min(1200, wrapW - right - 12));
+    } else if (left && !right) {
+      right = Math.max(200, Math.min(600, Math.round(left * 0.5)));
+    }
+    block.style.setProperty('--cm-left-w', `${left}px`);
+    block.style.setProperty('--cm-right-w', `${right}px`);
+  };
+
+  const applyHeight = () => {
+    const img = currentVisibleImg(leftRoot);
+    const h = Math.round((img?.getBoundingClientRect().height) || viewport.getBoundingClientRect().height || 0);
+    if (h > 0) block.style.setProperty('--cm-height', `${h}px`);
+  };
+
+  // 初回適用
+  applyWidths();
+  // viewport の高さは画像読み込み後で決まるので、load/resize/observerで追従
+  applyHeight();
+
+  // ResizeObserver で imagelink/左ビュー/画像を監視
+  const roTargets = [imagelink, leftRoot, viewport].filter(Boolean);
+  const ro = new ResizeObserver(() => {
+    applyWidths();
+    applyHeight();
+  });
+  roTargets.forEach((t) => ro.observe(t));
+
+  // imagelink 内の左右カラムが別要素であればそれぞれも監視（精度UP）
+  if (imagelink) {
+    const leftCol = imagelink.querySelector(':scope > div:first-child');
+    const rightAny = imagelink.querySelector(':scope > div:last-child');
+    if (leftCol) ro.observe(leftCol);
+    if (rightAny) ro.observe(rightAny);
+  }
+
+  // 画像ロード後に高さを反映
+  const imgNow = currentVisibleImg(leftRoot);
+  if (imgNow && !imgNow.complete) {
+    imgNow.addEventListener('load', applyHeight, { once: true });
+  }
+  qa('img', viewport).forEach((im) => {
+    if (!im.complete) im.addEventListener('load', applyHeight, { once: true });
+  });
+
+  window.addEventListener('resize', () => {
+    applyWidths();
+    applyHeight();
   });
 }
