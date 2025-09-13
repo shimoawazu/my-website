@@ -1,18 +1,22 @@
 /* ===== carouselmini =====
-   ・imagelink 左ヒーロー幅に自動追従（JSが --carouselmini-width を注入）
-   ・表示: PC=3 / Tablet=2 / Mobile=1
-   ・ドットは「画像数」分を表示し、先頭表示中の画像番号をハイライト
+   ・幅：imagelink 左ヒーローに追従（JSが --carouselmini-width を注入）
+   ・比率：左ヒーローに追従（--hero-ratio 注入、無い場合 16/9）
+   ・表示：PC=3 / Tablet=2 / Mobile=1
+   ・自動再生：3秒ごとに「1画像」ずつ送る。最後まで行ったら最初に戻る
+   ・ドット：画像数ぶん生成。左端に表示中の画像インデックスをハイライト
 */
 
 .carouselmini {
   --carouselmini-gap: 12px;
   --carouselmini-radius: 12px;
   --carouselmini-bg: #ffffff;
-  --carouselmini-dot-size: 10px;
-  --carouselmini-dot-color: #d0d0d0;
-  --carouselmini-dot-active: #333;
 
-  /* ← imagelink左ヒーローの幅をJSがpxで注入。なければ100% */
+  /* ドット（⚪︎/⚫︎） */
+  --carouselmini-dot-size: 10px;
+  --carouselmini-dot-color: #bdbdbd;   /* 非アクティブの枠色（◯） */
+  --carouselmini-dot-active: #333333;  /* アクティブの塗り（⚫︎） */
+
+  /* imagelink 左ヒーロー幅をJSがpxで注入。なければ100% */
   width: var(--carouselmini-width, 100%);
   max-width: 100%;
   margin: 0;
@@ -134,7 +138,7 @@
   left: calc(50% - 2px);
 }
 
-/* ===== ドット（画像数ぶん） ===== */
+/* ===== ドット（画像数ぶん、◯/⚫︎スタイル） ===== */
 .carouselmini .carouselmini-indicators {
   display: flex;
   justify-content: center;
@@ -148,17 +152,18 @@
   width: var(--carouselmini-dot-size);
   height: var(--carouselmini-dot-size);
   border-radius: 50%;
-  border: 0;
+  border: 2px solid var(--carouselmini-dot-color);
+  background: transparent; /* ◯ */
   padding: 0;
-  background: var(--carouselmini-dot-color);
   cursor: pointer;
 }
 
 .carouselmini .carouselmini-indicators button[aria-current="true"] {
-  background: var(--carouselmini-dot-active);
+  background: var(--carouselmini-dot-active); /* ⚫︎ */
+  border-color: var(--carouselmini-dot-active);
 }
 
-/* 視覚非表示の進捗テキスト（必要ならhidden解除） */
+/* 視覚非表示の進捗テキスト（必要なら display: inline-block に） */
 .carouselmini .carouselmini-status {
   margin-left: 8px;
   font-size: 12px;
