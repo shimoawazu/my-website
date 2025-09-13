@@ -1,31 +1,17 @@
-/* ===== carouselmini (3-up slider + right 2 image links) =====
-   - 左: スライダー（最後の2枚を除いた画像）… 3枚同時表示
-   - 右: 最後の2枚を縦に2分割で表示（画像リンク）
-   - 幅:   --cm-left-w  = imagelink 左の大きい画像の実幅（JSが注入）
-           --cm-right-w = imagelink 右の小さい画像の実幅（JSが注入, 右端揃え）
-   - 高さ: --cm-height = 左で「実際に見えている画像の高さ」（JSが注入）
+/* ===== carouselmini (3-up infinite slider) =====
+   - すべての画像をスライドとして利用（最後の2枚も含む）
+   - 3枚同時表示、3秒で1枚送り、無限ループ
+   - 幅:   --cm-left-w = imagelink 左の大きい画像の実幅（JSが注入）
 */
 
 .carouselmini {
-  --cm-gap: 12px;
-  --cm-radius: 12px;
   --cm-left-w: 640px;     /* フォールバック（JSが上書き） */
-  --cm-right-w: 360px;    /* フォールバック（JSが上書き） */
-  --cm-height: auto;      /* JSが実高さ注入 */
+  --cm-radius: 12px;
   --cm-per-view: 3;       /* ★ 3枚同時表示 */
 }
 
-/* 横並びの内側ラッパー（JSが生成） */
-.carouselmini .carouselmini-pair {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--cm-gap);
-  width: 100%;
-}
-
-/* 左列：カルーセル本体 */
+/* 内部ラッパー（JSが生成） */
 .carouselmini .carouselmini-left {
-  flex: 0 0 var(--cm-left-w);
   width: var(--cm-left-w);
   max-width: 100%;
   min-width: 0;
@@ -68,7 +54,7 @@
   object-fit: cover;
 }
 
-/* インジケーター（ページングでも可、ここでは実スライド基準） */
+/* インジケーター（画像枚数ぶん／左端の画像がどれかを示す） */
 .carouselmini .carouselmini-indicators {
   display: flex;
   justify-content: center;
@@ -93,58 +79,9 @@
   background: #111;
 }
 
-/* 右列：最後の2枚（画像リンク）… 幅は imagelink 右、右端に寄せる */
-.carouselmini .carouselmini-right {
-  flex: 0 0 var(--cm-right-w);
-  width: var(--cm-right-w);
-  max-width: 100%;
-  height: var(--cm-height);
-  display: grid;
-  grid-template-rows: 1fr 1fr;
-  gap: var(--cm-gap);
-  min-height: 120px;
-  margin-left: auto; /* ★ 右端揃え */
-}
-
-/* 各リンクカード */
-.carouselmini .carouselmini-link {
-  position: relative;
-  overflow: hidden;
-  border-radius: var(--cm-radius);
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0 0 0 / 6%);
-}
-
-.carouselmini .carouselmini-link > a {
-  display: block;
-  width: 100%;
-  height: 100%;
-  color: inherit;
-  text-decoration: none;
-}
-
-.carouselmini .carouselmini-link picture,
-.carouselmini .carouselmini-link img {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.carouselmini .carouselmini-link img {
-  object-fit: cover;
-}
-
-/* モバイルは縦積み（上：カルーセル／下：リンク2枚） */
+/* モバイルは横幅にフィット（1～2枚表示はJS側の perView を固定のまま） */
 @media (max-width: 899.98px) {
-  .carouselmini .carouselmini-pair {
-    flex-direction: column;
-  }
-  .carouselmini .carouselmini-left,
-  .carouselmini .carouselmini-right {
+  .carouselmini .carouselmini-left {
     width: 100%;
-    flex-basis: auto;
-  }
-  .carouselmini .carouselmini-right {
-    height: auto; /* モバイルは自動高さ */
   }
 }
