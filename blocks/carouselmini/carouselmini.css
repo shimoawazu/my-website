@@ -1,22 +1,26 @@
 /* ===== carouselmini =====
-   ・imagelink の左ヒーロー幅に合わせて横幅を自動調整（JSが --carouselmini-width を注入）
+   ・imagelink 左ヒーロー幅に自動追従（JSが --carouselmini-width を注入）
    ・表示枚数: PC=3 / Tablet=2 / Mobile=1
-   ・各カードは左ヒーローと同じアスペクト比（--hero-ratio）でトリミング
+   ・下部にドットインジケーター（現在ページが分かる）
 */
+
 .carouselmini {
   --carouselmini-gap: 12px;
   --carouselmini-radius: 12px;
   --carouselmini-bg: #ffffff;
+  --carouselmini-dot-size: 10px;
+  --carouselmini-dot-color: #d0d0d0;
+  --carouselmini-dot-active: #333;
 
   /* JSが注入する幅。なければ100% */
   width: min(100%, var(--carouselmini-width, 100%));
-  margin: 0; /* 左寄せ */
+  margin: 0;
 }
 
 /* ビューポート（はみ出しを隠す） */
 .carouselmini .carouselmini-viewport {
   position: relative;
-  overflow: hidden; /* ナビを重ねるので隠す */
+  overflow: hidden;
 }
 
 /* スライド行（実体は「カードの横並びリスト」） */
@@ -100,6 +104,7 @@
   padding: 0;
   background-color: rgba(19 19 19 / 25%);
   transition: background-color .2s;
+  cursor: pointer;
 }
 
 .carouselmini .carouselmini-nav button:hover,
@@ -126,6 +131,37 @@
 .carouselmini .carouselmini-nav .next::after {
   transform: translate(-50%, -50%) rotate(45deg);
   left: calc(50% - 2px);
+}
+
+/* ===== ドットインジケーター ===== */
+.carouselmini .carouselmini-indicators {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  line-height: 0;
+}
+
+.carouselmini .carouselmini-indicators button {
+  width: var(--carouselmini-dot-size);
+  height: var(--carouselmini-dot-size);
+  border-radius: 50%;
+  border: 0;
+  padding: 0;
+  background: var(--carouselmini-dot-color);
+  cursor: pointer;
+}
+
+.carouselmini .carouselmini-indicators button[aria-current="true"] {
+  background: var(--carouselmini-dot-active);
+}
+
+/* ステータス（視覚 or スクリーンリーダー用） */
+.carouselmini .carouselmini-status {
+  margin-left: 8px;
+  font-size: 12px;
+  color: #666;
 }
 
 /* 余白調整（ブロック間） */
