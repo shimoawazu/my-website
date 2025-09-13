@@ -1,15 +1,15 @@
 /**
  * carouselmini (3-up)
- * - ブロック内の各行をスライド化（最後の2枚も含めて全て対象）
- * - 3枚同時表示（--cm-per-view = 3）、3秒で1枚送り、無限ループ（クローン方式）
- * - インディケーターは画像枚数ぶん。左端に見えている実スライドに合わせて更新
+ * - ブロック内の各行をそのままスライド化（最後の2枚も含む）
+ * - 3枚同時表示、3秒で1枚送り、クローン方式の無限ループ
  * - 幅は近傍の imagelink 左カラム幅に同期
+ * - 高さは「表示中の3枚の実高の最大値」を viewport に毎回セット（imagelink 高さとは無関係）
  */
 
 function q(sel, root = document) { return root.querySelector(sel); }
 function qa(sel, root = document) { return [...root.querySelectorAll(sel)]; }
 
-/* ===== 近傍 imagelink から左幅を測定 ===== */
+/* ===== imagelink の左カラム幅を取得 ===== */
 function findImagelinkNear(block) {
   const pick = (node) => node?.classList?.contains('imagelink') ? node : node?.querySelector?.('.imagelink');
   let n = block.previousElementSibling;
@@ -45,9 +45,39 @@ function perfTweakImages(root) {
   });
 }
 
+/* ===== 表示中3枚の最大高さを viewport に反映 ===== */
+function setViewportHeightForVisible(viewport, track, perView, virtualIndex) {
+  const slidesAll = qa(':scope > .carouselmini-slide', track);
+  if (slidesAll.length === 0) return;
+  let maxH = 0;
+
+  for (let k = 0; k < perView; k += 1) {
+    const idx = virtualIndex + k;
+    const s = slidesAll[idx];
+    if (!s) continue;
+
+    const img = s.querySelector('img') || s.querySelector('picture img');
+    if (!img) continue;
+
+    // スライドの現在の幅に対する画像の自然高を推定
+    const sw = s.getBoundingClientRect().width || 0;
+    let h = 0;
+    if (img.naturalWidth && img.naturalHeight && sw) {
+      h = (img.naturalHeight / img.naturalWidth) * sw;
+    } else {
+      h = img.getBoundingClientRect().height; // フォールバック
+    }
+    if (h > maxH) maxH = h;
+  }
+
+  if (maxH > 0) {
+    viewport.style.height = `${Math.round(maxH)}px`;
+  }
+}
+
 /* ===== メイン ===== */
 export default function decorate(block) {
-  // 1) 既存行（画像行）を取得し、空なら終了
+  // 1) 元の行を取得
   const rows = qa(':scope > div', block);
   if (rows.length === 0) return;
 
@@ -68,7 +98,7 @@ export default function decorate(block) {
   indicators.className = 'carouselmini-indicators';
   leftRoot.appendChild(indicators);
 
-  // 既存行を抜いて配置
+  // 既存行を除去して配置
   rows.forEach((r) => r.remove());
   block.appendChild(leftRoot);
 
@@ -76,10 +106,9 @@ export default function decorate(block) {
   const slides = rows.map(makeSlideFromRow);
   slides.forEach((s) => track.appendChild(s));
 
-  // 画像の軽微最適化
   perfTweakImages(block);
 
-  // 4) 3枚同時表示のセットアップ
+  // 4) 3枚同時表示
   const perView = 3;
   block.style.setProperty('--cm-per-view', String(perView));
 
@@ -88,24 +117,24 @@ export default function decorate(block) {
     return;
   }
 
-  // 無限ループ用クローン（前後に perView 枚）
+  // 5) 無限ループ用に前後クローンを perView 枚追加
+  const cloneCount = Math.min(perView, slides.length);
   const addClones = (count) => {
     const len = slides.length;
-    // 左端側に末尾から count 枚を追加
+    // 左へ（末尾から count）
     for (let i = 0; i < count; i += 1) {
       const src = slides[(len - count + i + len) % len];
       track.insertBefore(src.cloneNode(true), track.firstChild);
     }
-    // 右端側に先頭から count 枚を追加
+    // 右へ（先頭から count）
     for (let i = 0; i < count; i += 1) {
       const src = slides[i % len];
       track.appendChild(src.cloneNode(true));
     }
   };
-  const cloneCount = Math.min(perView, slides.length);
   addClones(cloneCount);
 
-  // インジケーター（実スライド数ぶん）
+  // 6) インジケーター（実スライド数ぶん）
   slides.forEach((_, i) => {
     const li = document.createElement('li');
     const btn = document.createElement('button');
@@ -116,24 +145,15 @@ export default function decorate(block) {
     indicators.appendChild(li);
   });
 
-  // 5) ステート／移動制御（仮想index = クローン込みの先頭からの位置）
-  const unit = 100 / perView;        // 1スライドぶんの%移動量
-  const virtualStart = cloneCount;    // 実スライドの先頭位置
-  let virtualIndex = virtualStart;    // 左端に見えているスライドの仮想index
+  // 7) ステート／移動制御
+  const unit = 100 / perView;           // 1枚ぶんの%移動量
+  const virtualStart = cloneCount;       // 実スライド先頭の仮想位置
+  let virtualIndex = virtualStart;
   let timer = null;
 
-  function setActiveByVirtualIndex() {
+  function updateIndicators() {
     const realTotal = slides.length;
-    // 左端に見えている「実スライド」のインデックス
     const realIndex = ((virtualIndex - cloneCount) % realTotal + realTotal) % realTotal;
-
-    // アクティブ表示（任意）
-    const allSlides = qa('.carouselmini-track > .carouselmini-slide', leftRoot);
-    allSlides.forEach((s) => s.classList.remove('carouselmini-slide--active'));
-    const target = allSlides[virtualIndex];
-    if (target) target.classList.add('carouselmini-slide--active');
-
-    // インジケーター更新
     qa('.carouselmini-indicators button', leftRoot).forEach((b, i) => {
       b.setAttribute('aria-current', i === realIndex ? 'true' : 'false');
     });
@@ -144,35 +164,46 @@ export default function decorate(block) {
     track.style.transform = `translateX(-${virtualIndex * unit}%)`;
   }
 
+  function refreshHeightSoon() {
+    // レイアウト反映後に高さを計算
+    requestAnimationFrame(() => {
+      setViewportHeightForVisible(viewport, track, perView, virtualIndex);
+    });
+  }
+
   function goto(nextVirtualIndex) {
     virtualIndex = nextVirtualIndex;
     applyTransform(true);
-    setActiveByVirtualIndex();
+    updateIndicators();
+    refreshHeightSoon();
   }
 
   function step(dir = 1) {
     goto(virtualIndex + dir);
   }
 
-  // 初期位置へ
+  // 初期位置
   applyTransform(false);
-  setActiveByVirtualIndex();
+  updateIndicators();
+  refreshHeightSoon();
 
-  // 端での巻き戻し（瞬時ジャンプ）
+  // 端で瞬時巻き戻し
   track.addEventListener('transitionend', () => {
     const realTotal = slides.length;
     if (virtualIndex >= realTotal + cloneCount) {
       virtualIndex -= realTotal;
       applyTransform(false);
-      setActiveByVirtualIndex();
+      updateIndicators();
+      refreshHeightSoon();
     } else if (virtualIndex < cloneCount) {
       virtualIndex += realTotal;
       applyTransform(false);
-      setActiveByVirtualIndex();
+      updateIndicators();
+      refreshHeightSoon();
     }
   });
 
-  // 6) オートプレイ（3秒）
+  // 8) オートプレイ（3秒）
   function stop() { if (timer) clearInterval(timer); timer = null; }
   function play() { stop(); if (slides.length > 0) timer = setInterval(() => step(1), 3000); }
   leftRoot.addEventListener('mouseenter', stop);
@@ -181,25 +212,28 @@ export default function decorate(block) {
   leftRoot.addEventListener('focusout', play);
   play();
 
-  /* ===== 幅の同期（imagelink 左カラム） ===== */
+  /* ===== 幅同期（imagelink 左カラム） ===== */
   const imagelink = findImagelinkNear(block);
   const applyWidth = () => {
     let left = measureLeftWidthFromImagelink(imagelink);
     if (!left) {
-      // フォールバック：親幅の 65%
-      const wrapW = block.getBoundingClientRect().width || window.innerWidth;
-      left = Math.round(wrapW * 0.65);
+      // フォールバック：ブロックの親幅
+      const wrapW = block.parentElement?.getBoundingClientRect().width || block.getBoundingClientRect().width || window.innerWidth;
+      left = Math.round(wrapW);
     }
     block.style.setProperty('--cm-left-w', `${left}px`);
+    refreshHeightSoon(); // 幅が変われば高さも再計算
   };
   applyWidth();
 
-  const ro = new ResizeObserver(applyWidth);
-  [imagelink, block].filter(Boolean).forEach((t) => ro.observe(t));
+  const ro = new ResizeObserver(() => {
+    applyWidth();
+  });
+  [imagelink, block.parentElement, block].filter(Boolean).forEach((t) => ro.observe(t));
 
-  // 画像ロード時の高さ変動に備えて再配置（% ベースなので特に不要だが微ブレ抑止）
-  qa('img', viewport).forEach((im) => {
-    if (!im.complete) im.addEventListener('load', () => applyWidth(), { once: true });
+  // 画像ロード完了時にも高さ再計算
+  qa('img', track).forEach((im) => {
+    if (!im.complete) im.addEventListener('load', refreshHeightSoon, { once: true });
   });
   window.addEventListener('resize', applyWidth);
 }
