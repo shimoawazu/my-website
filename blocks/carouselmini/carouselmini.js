@@ -3,8 +3,9 @@
  * - 幅：imagelink 左ヒーローに追従（--carouselmini-width）
  * - 比率：imagelink 左ヒーローに追従（--hero-ratio、無ければ16/9）
  * - 可視列：PC=3 / Tablet=2 / Mobile=1（CSS変数）
- * - 自動再生：3秒ごとに「1画像」ずつ送る。末尾まで来たら先頭に戻る（ループ）
- * - ドット：画像枚数ぶん生成し、左端に見えている画像インデックスをハイライト
+ * - 自動再生：3秒ごとに「1画像」ずつ。末尾の後ろに 1/2 のクローンを並べ、
+ *              [ …, N ] → [ N, 1*, 2* ] を表示した直後に [1,2,3] へ瞬時リセット
+ * - ドット：元画像枚数ぶん。左端が 1*（クローン）になった時は最右（N）を点灯
  */
 
 function q(sel, root = document) { return root.querySelector(sel); }
@@ -71,7 +72,7 @@ function bindImagelinkSync(block) {
   // 初期適用
   applyWidth(); applyRatio();
 
-  // リサイズで幅追従
+  // リサイズ追従
   const ro = new ResizeObserver(applyWidth);
   ro.observe(el);
 
@@ -95,7 +96,7 @@ function getStepWidth(block) {
   const scroller = q('.carouselmini-slides', block);
   const items = scroller ? qa('.carouselmini-item', scroller) : [];
   if (!scroller || items.length === 0) return 0;
-  if (items.length >= 2) return items[1].offsetLeft - items[0].offsetLeft; // gap込みの1枚分
+  if (items.length >= 2) return items[1].offsetLeft - items[0].offsetLeft; // gap込み
   return items[0].getBoundingClientRect().width;
 }
 
@@ -105,6 +106,7 @@ function getCurrentIndex(block) {
   return Math.round((scroller?.scrollLeft || 0) / step);
 }
 
+/* totalItems にはクローンを含む。maxIndex は「左端として成立する最大インデックス」 */
 function getMaxIndex(block) {
   const scroller = q('.carouselmini-slides', block);
   const totalItems = scroller ? scroller.children.length : 0;
@@ -122,7 +124,7 @@ function scrollToIndex(block, idx, behavior = 'smooth') {
   updateIndicators(block, target); // ドット更新
 }
 
-/* ===== ドット（画像数ぶん） ===== */
+/* ===== ドット（元画像数ぶん） ===== */
 function buildIndicators(block) {
   let wrap = q('.carouselmini-indicators', block);
   if (!wrap) {
@@ -138,13 +140,11 @@ function buildIndicators(block) {
   // 既存ボタンをクリア（statusは残す）
   qa('button', wrap).forEach((b) => b.remove());
 
-  const scroller = q('.carouselmini-slides', block);
-  const totalItems = scroller ? scroller.children.length : 0;
-
-  for (let i = 0; i < totalItems; i += 1) {
+  const totalOriginal = block._cmOriginal || 0;
+  for (let i = 0; i < totalOriginal; i += 1) {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.setAttribute('aria-label', `画像 ${i + 1} / ${totalItems} を表示`);
+    btn.setAttribute('aria-label', `画像 ${i + 1} / ${totalOriginal} を表示`);
     btn.addEventListener('click', () => scrollToIndex(block, i));
     wrap.insertBefore(btn, q('.carouselmini-status', wrap));
   }
@@ -152,21 +152,30 @@ function buildIndicators(block) {
   updateIndicators(block, getCurrentIndex(block));
 }
 
+/* 左端インデックス → ドットのインデックス（元画像スケール） */
+function mapIndexToDot(currentIdx, totalOriginal) {
+  if (totalOriginal <= 0) return 0;
+  const eff = currentIdx % totalOriginal;
+  // 左端が 1枚目クローン（= eff === 0 かつ currentIdx >= totalOriginal）なら最右を点灯
+  if (currentIdx >= totalOriginal && eff === 0) return totalOriginal - 1;
+  return eff;
+}
+
 function updateIndicators(block, currentIdx) {
   const wrap = q('.carouselmini-indicators', block);
   if (!wrap) return;
 
-  const scroller = q('.carouselmini-slides', block);
-  const totalItems = scroller ? scroller.children.length : 0;
-
+  const totalOriginal = block._cmOriginal || 0;
   const btns = qa('button', wrap);
+  const dotIdx = mapIndexToDot(currentIdx, totalOriginal);
+
   btns.forEach((b, i) => {
-    if (i === currentIdx) b.setAttribute('aria-current', 'true');
+    if (i === dotIdx) b.setAttribute('aria-current', 'true');
     else b.removeAttribute('aria-current');
   });
 
   const status = q('.carouselmini-status', wrap);
-  if (status) status.textContent = `${Math.min(currentIdx + 1, totalItems)} / ${totalItems}`;
+  if (status) status.textContent = `${dotIdx + 1} / ${totalOriginal}`;
 }
 
 /* ===== スクロール追従（ドット更新） ===== */
@@ -184,7 +193,7 @@ function bindScrollUpdate(block) {
   };
   scroller.addEventListener('scroll', onScroll);
 
-  // リサイズでステップ幅や列数が変わる → 再構築＆現在地へスナップ
+  // リサイズでステップ幅/列数が変わる → 再構築＆現在地へスナップ
   const ro = new ResizeObserver(() => {
     const curr = getCurrentIndex(block);
     buildIndicators(block);
@@ -193,23 +202,35 @@ function bindScrollUpdate(block) {
   ro.observe(block);
 }
 
-/* ===== オートプレイ（3秒ごとに1画像ずつ。最後→最初にループ） ===== */
+/* ===== オートプレイ（1枚ずつ、N → 1* → 2* → リセット→ 1） ===== */
 function startAutoplay(block, intervalMs = 3000) {
   const scroller = q('.carouselmini-slides', block);
   if (!scroller) return;
 
-  const totalItems = scroller.children.length;
-  if (totalItems <= 1) return; // 1枚なら不要
+  const totalOriginal = block._cmOriginal || 0;
+  const totalItems = scroller.children.length; // クローン込み
+  if (totalOriginal <= 1 || totalItems <= 1) return;
 
   if (block._carouselminiTimer) clearInterval(block._carouselminiTimer);
 
   block._carouselminiTimer = setInterval(() => {
     const curr = getCurrentIndex(block);
+    const cols = getCols(block);
     const maxIdx = getMaxIndex(block);
+    const firstCloneIdx = totalOriginal;      // 左端=1* の位置
+    const secondCloneIdx = totalOriginal + 1; // 左端=2* の位置
+
+    // 2* を表示した「次」は、[1,2,3] へ瞬時リセット
+    if (curr >= secondCloneIdx) {
+      scrollToIndex(block, 0, 'auto'); // ノーアニメで戻す
+      return;
+    }
+
+    // 通常は1枚送る。末尾（N）→ 1* → 2* と進む
     const next = curr + 1;
     if (next > maxIdx) {
-      // 末尾の次は先頭へ
-      scrollToIndex(block, 0);
+      // 念のため上限ガード（通常は secondCloneIdx を超える前にリセットされる）
+      scrollToIndex(block, 0, 'auto');
     } else {
       scrollToIndex(block, next);
     }
@@ -234,33 +255,48 @@ function startAutoplay(block, intervalMs = 3000) {
   });
 }
 
-/* ===== 前後ボタン（1画像ずつ。ループ） ===== */
+/* ===== 前後ボタン（1枚ずつ。末尾→1*→2*→リセット） ===== */
 function bindNavButtons(block) {
   const prev = q('.carouselmini-nav .prev', block);
   const next = q('.carouselmini-nav .next', block);
+  const scroller = q('.carouselmini-slides', block);
+  if (!scroller) return;
+
+  const totalOriginal = block._cmOriginal || 0;
+
   if (prev) {
     prev.addEventListener('click', () => {
       const curr = getCurrentIndex(block);
+      const cols = getCols(block);
       const maxIdx = getMaxIndex(block);
-      const target = curr - 1;
-      if (target < 0) scrollToIndex(block, maxIdx);
-      else scrollToIndex(block, target);
+      let target = curr - 1;
+
+      if (target < 0) {
+        // 先頭から戻る → 末尾左端へ
+        target = Math.max(0, totalOriginal - cols);
+      }
+      scrollToIndex(block, target);
     });
   }
+
   if (next) {
     next.addEventListener('click', () => {
       const curr = getCurrentIndex(block);
-      const maxIdx = getMaxIndex(block);
+      const secondCloneIdx = totalOriginal + 1;
       const target = curr + 1;
-      if (target > maxIdx) scrollToIndex(block, 0);
-      else scrollToIndex(block, target);
+
+      if (curr >= secondCloneIdx) {
+        // 2* の次はリセット
+        scrollToIndex(block, 0, 'auto');
+      } else {
+        scrollToIndex(block, target);
+      }
     });
   }
 }
 
 /* ===== 初期化をレイアウト確定後に実行（画像ロード前の0幅対策） ===== */
 function initAfterLayout(block, fn) {
-  // 2フレーム待ってから実行してレイアウトを安定させる
   requestAnimationFrame(() => requestAnimationFrame(fn));
 }
 
@@ -269,7 +305,11 @@ export default function decorate(block) {
   // オーサリングの行/セル → アイテム化
   const cells = [];
   [...block.children].forEach((row) => { [...row.children].forEach((cell) => cells.push(cell)); });
-  const items = cells.map((cell) => normalizeCellToItem(cell));
+  const originals = cells.map((cell) => normalizeCellToItem(cell));
+
+  // 元画像枚数を保存（ドットはこの数で作る）
+  const totalOriginal = originals.length;
+  block._cmOriginal = totalOriginal;
 
   // DOM構築
   const viewport = document.createElement('div');
@@ -277,7 +317,16 @@ export default function decorate(block) {
 
   const list = document.createElement('ul');
   list.className = 'carouselmini-slides';
-  items.forEach((it) => list.appendChild(it));
+
+  // 元画像を追加
+  originals.forEach((it) => list.appendChild(it));
+
+  // 末尾に「1枚目」「2枚目」のクローンを追加
+  const cloneCount = Math.min(2, totalOriginal);
+  for (let i = 0; i < cloneCount; i += 1) {
+    const clone = originals[i].cloneNode(true);
+    list.appendChild(clone);
+  }
 
   const nav = document.createElement('div');
   nav.className = 'carouselmini-nav';
@@ -294,7 +343,7 @@ export default function decorate(block) {
   // imagelink 同期（幅・比率）
   bindImagelinkSync(block);
 
-  // 画像の軽量属性 & typo補正
+  // 画像の軽量属性 & typo補正（webply → webp）
   qa('img', block).forEach((img) => {
     if (!img.getAttribute('loading')) img.setAttribute('loading', 'lazy');
     if (!img.getAttribute('decoding')) img.setAttribute('decoding', 'async');
@@ -309,9 +358,9 @@ export default function decorate(block) {
 
   // レイアウト確定後に各種バインド
   initAfterLayout(block, () => {
-    buildIndicators(block);
-    bindScrollUpdate(block);
-    bindNavButtons(block);
-    startAutoplay(block, 3000); // ★ 3秒ごとに「1画像」送る
+    buildIndicators(block);     // ドット＝元画像数
+    bindScrollUpdate(block);    // スクロールでドット更新
+    bindNavButtons(block);      // 前後ボタン（1枚ずつ）
+    startAutoplay(block, 3000); // ★ 3秒ごとに1枚送り（N→1*→2*→リセット→1…）
   });
 }

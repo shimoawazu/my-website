@@ -1,9 +1,9 @@
 /* ===== carouselmini =====
-   ・幅：imagelink 左ヒーローに追従（JSが --carouselmini-width を注入）
+   ・幅：imagelink 左ヒーローに追従（JSが --carouselmini-width 注入）
    ・比率：左ヒーローに追従（--hero-ratio 注入、無い場合 16/9）
    ・表示：PC=3 / Tablet=2 / Mobile=1
-   ・自動再生：3秒ごとに「1画像」ずつ送る。最後まで行ったら最初に戻る
-   ・ドット：画像数ぶん生成。左端に表示中の画像インデックスをハイライト
+   ・自動再生：3秒ごとに「1画像」ずつ送る（末尾の後ろに 1/2 のクローン → リセット）
+   ・ドット：画像数ぶん。左端がクローン1枚目のときは最右を点灯
 */
 
 .carouselmini {
@@ -11,12 +11,12 @@
   --carouselmini-radius: 12px;
   --carouselmini-bg: #ffffff;
 
-  /* ドット（⚪︎/⚫︎） */
+  /* ドット（◯/⚫︎） */
   --carouselmini-dot-size: 10px;
   --carouselmini-dot-color: #bdbdbd;   /* 非アクティブの枠色（◯） */
   --carouselmini-dot-active: #333333;  /* アクティブの塗り（⚫︎） */
 
-  /* imagelink 左ヒーロー幅をJSがpxで注入。なければ100% */
+  /* imagelink 左ヒーロー幅（JS注入）。無ければ100% */
   width: var(--carouselmini-width, 100%);
   max-width: 100%;
   margin: 0;
@@ -59,7 +59,7 @@
   scroll-snap-align: start;
 }
 
-/* カード本体（比率はimagelink左ヒーローに追従。無い場合16:9） */
+/* カード（比率はimagelink左ヒーローに追従。無い場合16:9） */
 .carouselmini .carouselmini-frame {
   position: relative;
   width: 100%;
