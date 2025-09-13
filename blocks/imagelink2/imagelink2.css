@@ -1,100 +1,43 @@
-/* ===== imagelink2 - carousel2 の右横に配置、画像高さに同期 =====
-   - JS が .imagelink2-pair を作り、左: carousel2 / 右: imagelink2 に並べます
-   - 高さは --imagelink2-height（= carousel2 で実際に見えている画像の高さ）
-   - 右列の幅は --imagelink2-col-width（JS が計算し注入）
-*/
+/* ===== imagelink2 (vertical 2-up, height sync to carouselmini) ===== */
 
-/* 横並び用ラッパー（JSが生成） */
-.imagelink2-pair {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;       /* 子どもを上揃え（高さは各自の指定に従う） */
-  width: 100%;
-}
-
-/* 左列: carousel2 側（フォールバックで .carousel / .carouselmini も対応） */
-.imagelink2-pair > .carousel2,
-.imagelink2-pair > .carousel,
-.imagelink2-pair > .carouselmini {
-  flex: 1 1 0;
-  min-width: 0;
-}
-
-/* 右列: imagelink2 のカラム幅 */
-.imagelink2-pair > .imagelink2 {
-  --imagelink2-col-width: 360px;   /* デフォルト（JSが上書き） */
-  flex: 0 0 var(--imagelink2-col-width);
-  width: var(--imagelink2-col-width);
-  max-width: 100%;
-}
-
-/* ===== imagelink2 本体 ===== */
 .imagelink2 {
-  --imagelink2-gap: 12px;
-  --imagelink2-radius: 12px;
-  --imagelink2-bg: #ffffff;
+  /* 2枚のすき間。JS がこの値を読んで各画像の高さを決めます */
+  --i2-gap: 8px;
+  /* JS が計算してセットする各画像の高さ */
+  --i2-item-h: auto;
 
-  width: var(--imagelink2-col-width, auto);               /* 幅は列幅で固定 */
-  height: var(--imagelink2-height, auto);                 /* ★ 画像高さに同期（JS注入） */
-  box-sizing: border-box;
-  min-height: 0;
-  margin-left: auto;                                      /* 単体配置時も右寄せの保険 */
+  display: flex;
+  flex-direction: column;
+  gap: var(--i2-gap);
+  align-items: stretch;
+
+  /* 必要なら右寄せにしたいときはコメント解除
+     margin-left: auto;
+  */
 }
 
-/* 2枚を縦に 1:1 で並べる（全高を2分割） */
-.imagelink2 .imagelink2-list {
-  display: grid;
-  grid-template-rows: 1fr 1fr;
-  gap: var(--imagelink2-gap);
+/* セルの a/picture はブロック化して高さを適用できるように */
+.imagelink2 a,
+.imagelink2 picture {
+  display: block;
   width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  height: var(--i2-item-h);
+  overflow: hidden; /* object-fit: cover 用にトリミング */
+  border-radius: 8px;
 }
 
-/* 各アイテム */
-.imagelink2 .imagelink2-item {
-  position: relative;
-  overflow: hidden;
-  background: var(--imagelink2-bg);
-  border-radius: var(--imagelink2-radius);
-  box-shadow: 0 2px 8px rgba(0 0 0 / 6%);
-  min-height: 100px; /* 極端な小画面時の保険 */
-}
-
-/* 画像リンクを全面化 */
-.imagelink2 .imagelink2-item > a {
+/* 画像はコンテナにフィット（歪みなし） */
+.imagelink2 picture img,
+.imagelink2 img {
   display: block;
   width: 100%;
   height: 100%;
-  color: inherit;
-  text-decoration: none;
+  object-fit: cover; /* 必要に応じて contain に変更可 */
 }
 
-.imagelink2 .imagelink2-item picture,
-.imagelink2 .imagelink2-item img {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.imagelink2 .imagelink2-item img {
-  object-fit: cover;
-}
-
-/* モバイル: 縦積み（上:carousel、下:imagelink2） */
-@media (max-width: 899.98px) {
-  .imagelink2-pair {
-    flex-direction: column;
-  }
-  .imagelink2-pair > .imagelink2 {
-    width: 100%;
-    flex-basis: auto;
-  }
+/* 小さな画面では幅優先。高さはJSが都度計算して入れるのでOK */
+@media (max-width: 599.98px) {
   .imagelink2 {
-    --imagelink2-gap: 8px;
-    --imagelink2-radius: 10px;
-    height: auto; /* モバイルは自動高さ */
+    --i2-gap: 6px;
   }
 }

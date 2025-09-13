@@ -1,256 +1,100 @@
 /**
  * imagelink2
- * - carousel2（なければ carousel / carouselmini）の「実際に見えている画像の高さ」に同期
- * - 横並び: 左=carousel、右=imagelink2 を .imagelink2-pair に内包
- * - 列幅: 近傍 imagelink の右カラム幅、なければ wrapper 幅の 35%（280-480px にクリップ）
- * - コンテンツ: オーサリング2行を <ul><li> の画像リンクに正規化
+ * - 直近の carouselmini の viewport 高さに合わせて、
+ *   縦2枚の合計高さ＝carouselmini の高さ になるよう各画像の高さを自動調整
+ * - 監視タイミング：ResizeObserver（viewport）、transitionend（スライド切替）、
+ *   画像 load、window resize
  */
 
-function q(sel, root = document) { return root.querySelector(sel); }
-function qa(sel, root = document) { return [...root.querySelectorAll(sel)]; }
+function $(sel, root = document) { return root.querySelector(sel); }
+function $all(sel, root = document) { return [...root.querySelectorAll(sel)]; }
 
-/* ==== 近傍 carousel ブロック ==== */
-function findCarouselBlockNear(block) {
-  const candidates = ['.carousel2', '.carousel', '.carouselmini'];
-  // 前方
+/** 直近の carouselmini ブロックを探す */
+function findNearestCarouselmini(block) {
+  const isCM = (el) => el?.classList?.contains('carouselmini');
+  // まず兄弟を前方に
   let n = block.previousElementSibling;
-  while (n) {
-    for (const sel of candidates) {
-      const cand = n.matches?.(sel) ? n : n.querySelector?.(sel);
-      if (cand) return cand;
-    }
-    n = n.previousElementSibling;
-  }
-  // 後方
+  while (n) { if (isCM(n)) return n; n = n.previousElementSibling; }
+  // 次に後方
   n = block.nextElementSibling;
-  while (n) {
-    for (const sel of candidates) {
-      const cand = n.matches?.(sel) ? n : n.querySelector?.(sel);
-      if (cand) return cand;
-    }
-    n = n.nextElementSibling;
-  }
-  // 全体
-  for (const sel of candidates) {
-    const cand = q(sel);
-    if (cand) return cand;
-  }
-  return null;
+  while (n) { if (isCM(n)) return n; n = n.nextElementSibling; }
+  // なければページ内の最初
+  return $('.carouselmini');
 }
 
-/* ==== “実際に表示されている”画像ノードを取得 ==== */
-function isVisible(el) {
-  if (!el) return false;
-  const r = el.getBoundingClientRect();
-  return r.width > 0 && r.height > 0 && r.bottom > 0 && r.right > 0;
+/** gap(px) を取得（CSS変数 --i2-gap が優先。なければ computed gap/row-gap） */
+function getGapPx(el) {
+  const cs = getComputedStyle(el);
+  const varGap = cs.getPropertyValue('--i2-gap').trim();
+  if (varGap) {
+    const v = parseFloat(varGap);
+    if (!Number.isNaN(v)) return v;
+  }
+  const gap = parseFloat(cs.getPropertyValue('row-gap') || cs.getPropertyValue('gap')) || 0;
+  return gap;
 }
 
-function findVisibleCarouselImage(carousel) {
-  if (!carousel) return null;
+/** 高さを計算して --i2-item-h をセット */
+function applyHeights(block, viewportHeight) {
+  if (!viewportHeight) return;
+  const gap = getGapPx(block);
+  const perItem = Math.max(0, Math.round((viewportHeight - gap) / 2));
+  block.style.setProperty('--i2-item-h', `${perItem}px`);
 
-  // 優先度高い順に候補セレクタを列挙
-  const selectors = [
-    '.carousel2 .carousel-slide-image picture > img',
-    '.carousel2 .carousel-slide-image img',
-    '.carousel .carousel-slide-image picture > img',
-    '.carousel .carousel-slide-image img',
-    '.carouselmini .carouselmini-frame picture > img',
-    '.carouselmini .carouselmini-frame img',
-    'picture > img',
-    'img',
-  ];
-
-  for (const sel of selectors) {
-    const list = qa(sel, carousel);
-    // 今見えているものを返す（active スライドでなくても可視ならOK）
-    const vis = list.find((img) => isVisible(img));
-    if (vis) return vis;
-  }
-  return null;
-}
-
-/* ==== 近傍の imagelink 右カラム幅 ==== */
-function findImagelinkRightNear(refNode) {
-  if (!refNode) return null;
-  let host = refNode;
-  for (let i = 0; i < 3 && host; i += 1) {
-    const right =
-      host.querySelector?.('.imagelink .imagelink-right') ||
-      host.querySelector?.('.block.imagelink .imagelink-right') ||
-      host.querySelector?.('.imagelink > div:last-child');
-    if (right) return right;
-    host = host.parentElement;
-  }
-  return (
-    q('.imagelink .imagelink-right') ||
-    q('.block.imagelink .imagelink-right') ||
-    q('.imagelink > div:last-child')
-  );
-}
-
-/* ==== row -> li アイテム化 ==== */
-function normalizeRowToItem(row) {
-  const item = document.createElement('li');
-  item.className = 'imagelink2-item';
-
-  const link = row.querySelector('a[href]');
-  const pic  = row.querySelector('picture') || row.querySelector('img');
-
-  if (link) {
-    const a = document.createElement('a');
-    a.href = link.getAttribute('href');
-    const label = link.getAttribute('aria-label') || link.textContent?.trim() || '';
-    if (label) a.setAttribute('aria-label', label);
-    item.append(a);
-    if (pic) a.appendChild(pic);
-  } else if (pic) {
-    const a = document.createElement('a');
-    a.href = '#';
-    a.appendChild(pic);
-    item.append(a);
-  }
-  return item;
-}
-
-/* ==== 横並びラッパー生成（idempotent） ==== */
-function ensurePairWrapper(carousel, imagelink2) {
-  if (imagelink2.parentElement?.classList.contains('imagelink2-pair')) {
-    const wrap = imagelink2.parentElement;
-    if (carousel && carousel.parentElement !== wrap) {
-      wrap.insertBefore(carousel, wrap.firstChild);
-    }
-    return wrap;
-  }
-  const wrapper = document.createElement('div');
-  wrapper.className = 'imagelink2-pair';
-  if (carousel?.parentNode) {
-    carousel.parentNode.insertBefore(wrapper, carousel);
-    wrapper.appendChild(carousel);
-    wrapper.appendChild(imagelink2);
-  } else {
-    const p = imagelink2.parentNode;
-    p.insertBefore(wrapper, imagelink2);
-    wrapper.appendChild(imagelink2);
-  }
-  return wrapper;
-}
-
-/* ==== 幅・高さ同期 ==== */
-function bindSizeSync(wrapper, block, carousel, rightCol) {
-  const computeColWidth = () => {
-    if (rightCol) {
-      const w = Math.round(rightCol.getBoundingClientRect().width);
-      if (w > 0) return w;
-    }
-    const ww = wrapper.getBoundingClientRect().width || window.innerWidth;
-    // 基準: 35% を 280-480 にクリップ
-    return Math.max(280, Math.min(480, Math.round(ww * 0.35)));
-  };
-
-  const applyWidth = () => {
-    const w = computeColWidth();
-    wrapper.style.setProperty('--imagelink2-col-width', `${w}px`);
-  };
-
-  const applyHeightFromImage = () => {
-    const img = findVisibleCarouselImage(carousel);
-    if (!img) return;
-    const h = Math.round(img.getBoundingClientRect().height);
-    if (h > 0) {
-      block.style.setProperty('--imagelink2-height', `${h}px`);
-    }
-  };
-
-  // 初期適用
-  applyWidth();
-  applyHeightFromImage();
-
-  // 監視: wrapper サイズ、右カラム、ウィンドウリサイズ
-  const ro = new ResizeObserver(() => {
-    applyWidth();
-    applyHeightFromImage();
-  });
-  [wrapper, rightCol, carousel].filter(Boolean).forEach((t) => ro.observe(t));
-
-  // 監視: 可視画像そのもの（スライドで画像が入れ替わる可能性があるので、都度再取得してから監視）
-  let observedImg = null;
-  const observeCurrentImg = () => {
-    const img = findVisibleCarouselImage(carousel);
-    if (!img || img === observedImg) return;
-    if (observedImg && observedImg._ro) {
-      observedImg._ro.disconnect();
-      observedImg._ro = null;
-    }
-    const roImg = new ResizeObserver(applyHeightFromImage);
-    roImg.observe(img);
-    observedImg = img;
-    observedImg._ro = roImg;
-
-    // ロード未完なら load で反映
-    if (!img.complete) {
-      img.addEventListener('load', applyHeightFromImage, { once: true });
-    }
-  };
-  observeCurrentImg();
-
-  // MutationObserver: スライド遷移などで DOM が入れ替わったら再アタッチ
-  const mo = new MutationObserver(() => {
-    observeCurrentImg();
-    applyHeightFromImage();
-  });
-  mo.observe(carousel, { childList: true, subtree: true, attributes: true });
-
-  // 画像ロード（念押し）
-  window.addEventListener('load', () => {
-    observeCurrentImg();
-    applyHeightFromImage();
-  });
-
-  // ウィンドウリサイズ
-  window.addEventListener('resize', () => {
-    applyWidth();
-    applyHeightFromImage();
+  // 念のため、画像自体にも直接反映（CSS変数が効かない古い UA 対策）
+  $all('picture img, img', block).forEach((img) => {
+    img.style.height = `${perItem}px`;
+    img.style.width = '100%';
+    img.style.objectFit = 'cover';
   });
 }
 
-/* ==== 画質等の軽微調整 ==== */
-function perfTweakImages(root) {
-  qa('img', root).forEach((img) => {
+/** carouselmini viewport の現在の高さ（px）を取得 */
+function getViewportHeight(carouselmini) {
+  const viewport = $('.carouselmini-viewport', carouselmini) || carouselmini;
+  const rect = viewport.getBoundingClientRect();
+  return Math.round(rect.height);
+}
+
+export default function decorate(block) {
+  // 画像の perf ヒント
+  $all('img', block).forEach((img) => {
     if (!img.getAttribute('loading')) img.setAttribute('loading', 'lazy');
     if (!img.getAttribute('decoding')) img.setAttribute('decoding', 'async');
   });
-  qa('source[srcset], img[src]', root).forEach((el) => {
-    const attr = el.tagName === 'SOURCE' ? 'srcset' : 'src';
-    const val = el.getAttribute(attr);
-    if (val && val.includes('format=webply')) {
-      el.setAttribute(attr, val.replace(/format=webply/g, 'format=webp'));
-    }
+
+  const cm = findNearestCarouselmini(block);
+  if (!cm) return; // 近傍に carouselmini が無ければ何もしない
+
+  const viewport = $('.carouselmini-viewport', cm) || cm;
+  const track = $('.carouselmini-track', cm);
+
+  // 初回適用（レイアウト確定後に実行）
+  const initial = () => applyHeights(block, getViewportHeight(cm));
+  requestAnimationFrame(initial);
+
+  // viewport のサイズ変化を監視（スライドごとに高さが変わる場合にも追従）
+  const ro = new ResizeObserver(() => {
+    applyHeights(block, getViewportHeight(cm));
   });
-}
+  ro.observe(viewport);
 
-/* ==== エントリポイント ==== */
-export default function decorate(block) {
-  // 1) オーサリング行を <ul><li> に正規化
-  const rows = qa(':scope > div', block);
-  const list = document.createElement('ul');
-  list.className = 'imagelink2-list';
-  rows.forEach((row) => {
-    const item = normalizeRowToItem(row);
-    list.appendChild(item);
-    row.remove();
+  // スライドのアニメ完了時にも再計算（高さが一拍遅れて更新されるケース対策）
+  if (track) {
+    track.addEventListener('transitionend', () => {
+      applyHeights(block, getViewportHeight(cm));
+    });
+  }
+
+  // carouselmini / imagelink2 内の画像ロード後にも再計算
+  [...$all('img', cm), ...$all('img', block)].forEach((img) => {
+    if (!img.complete) img.addEventListener('load', () => {
+      applyHeights(block, getViewportHeight(cm));
+    }, { once: true });
   });
-  block.appendChild(list);
 
-  // 2) 近傍の carousel / 右カラム（幅参照）を取得
-  const carousel = findCarouselBlockNear(block);
-  const rightCol = findImagelinkRightNear(carousel || block);
-
-  // 3) 横並びラッパーに格納
-  const wrapper = ensurePairWrapper(carousel, block);
-
-  // 4) 幅・高さ同期（★ 高さは「見えている画像」の高さ）
-  bindSizeSync(wrapper, block, carousel || wrapper, rightCol);
-
-  // 5) 画質系微調整
-  perfTweakImages(block);
+  // 画面リサイズ
+  window.addEventListener('resize', () => {
+    applyHeights(block, getViewportHeight(cm));
+  });
 }
