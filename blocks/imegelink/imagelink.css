@@ -1,0 +1,92 @@
+/* imagelink block (Edge Delivery Services / Franklin) */
+.block.imagelink {
+  --imagelink-gap: 16px;
+  --imagelink-radius: 12px;
+  --imagelink-shadow: 0 2px 8px rgba(0,0,0,.06);
+  --imagelink-shadow-hover: 0 6px 16px rgba(0,0,0,.12);
+  --imagelink-overlay: rgba(0,0,0,.08);
+}
+
+.block.imagelink .imagelink-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--imagelink-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* >= 600px: 2 columns */
+@media (min-width: 600px) {
+  .block.imagelink .imagelink-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.block.imagelink .imagelink-tile {
+  position: relative;
+  border-radius: var(--imagelink-radius);
+  overflow: hidden;
+  box-shadow: var(--imagelink-shadow);
+  background: #fff;
+  transition: transform .2s ease, box-shadow .2s ease;
+  isolation: isolate;
+}
+
+.block.imagelink .imagelink-link {
+  display: block;
+  height: 100%;
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+}
+
+.block.imagelink .imagelink-thumb {
+  display: block;
+  width: 100%;
+  height: 100%;
+  line-height: 0;
+}
+
+.block.imagelink .imagelink-thumb picture,
+.block.imagelink .imagelink-thumb img {
+  display: block;
+  width: 100%;
+  height: auto; /* 画像の元比率を維持 */
+}
+
+/* ホバー演出（ポインタ環境のみ） */
+@media (hover: hover) and (pointer: fine) {
+  .block.imagelink .imagelink-link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--imagelink-overlay);
+    opacity: 0;
+    transition: opacity .2s ease;
+  }
+  .block.imagelink .imagelink-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--imagelink-shadow-hover);
+  }
+  .block.imagelink .imagelink-tile:hover .imagelink-link::after {
+    opacity: 1;
+  }
+}
+
+/* 画像が低解像度でも見栄えを保つための安全策 */
+.block.imagelink .imagelink-thumb img {
+  object-fit: cover; /* 元画像が小さい場合のトリミング保護 */
+  width: 100%;
+}
+
+/* キーボードフォーカス可視化 */
+.block.imagelink .imagelink-link:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: -3px;
+}
+
+/* 可変余白（必要なら上位で上書きください） */
+.block.imagelink {
+  margin-block: 24px;
+}
