@@ -3,9 +3,9 @@
  * - 幅：imagelink 左ヒーローに追従（--carouselmini-width）
  * - 比率：imagelink 左ヒーローに追従（--hero-ratio、無ければ16/9）
  * - 可視列：PC=3 / Tablet=2 / Mobile=1（CSS変数）
- * - 自動再生：3秒ごとに「1画像」ずつ。末尾の後ろに 1/2 のクローンを並べ、
- *              [ …, N ] → [ N, 1*, 2* ] を表示した直後に [1,2,3] へ瞬時リセット
- * - ドット：元画像枚数ぶん。左端が 1*（クローン）になった時は最右（N）を点灯
+ * - 自動再生：3秒ごとに「1画像」ずつ。末尾の後ろに元画像をフルでクローンし連結。
+ *              リスト末尾を超える次ステップでは「next - N」へ瞬時ジャンプして連続表示を維持
+ * - ドット：元画像枚数ぶん。左端に表示中の画像（クローン含む）に合わせて⚫︎を移動
  */
 
 function q(sel, root = document) { return root.querySelector(sel); }
@@ -152,13 +152,10 @@ function buildIndicators(block) {
   updateIndicators(block, getCurrentIndex(block));
 }
 
-/* 左端インデックス → ドットのインデックス（元画像スケール） */
+/* 左端インデックス → ドットのインデックス（元画像スケール、単純な modulo） */
 function mapIndexToDot(currentIdx, totalOriginal) {
   if (totalOriginal <= 0) return 0;
-  const eff = currentIdx % totalOriginal;
-  // 左端が 1枚目クローン（= eff === 0 かつ currentIdx >= totalOriginal）なら最右を点灯
-  if (currentIdx >= totalOriginal && eff === 0) return totalOriginal - 1;
-  return eff;
+  return currentIdx % totalOriginal; // クローン含め、常に元画像番号へ正規化
 }
 
 function updateIndicators(block, currentIdx) {
@@ -202,7 +199,7 @@ function bindScrollUpdate(block) {
   ro.observe(block);
 }
 
-/* ===== オートプレイ（1枚ずつ、N → 1* → 2* → リセット→ 1） ===== */
+/* ===== オートプレイ（1枚ずつ。末尾を超える次は next - N に瞬時ジャンプして連続表示） ===== */
 function startAutoplay(block, intervalMs = 3000) {
   const scroller = q('.carouselmini-slides', block);
   if (!scroller) return;
@@ -215,22 +212,13 @@ function startAutoplay(block, intervalMs = 3000) {
 
   block._carouselminiTimer = setInterval(() => {
     const curr = getCurrentIndex(block);
-    const cols = getCols(block);
     const maxIdx = getMaxIndex(block);
-    const firstCloneIdx = totalOriginal;      // 左端=1* の位置
-    const secondCloneIdx = totalOriginal + 1; // 左端=2* の位置
-
-    // 2* を表示した「次」は、[1,2,3] へ瞬時リセット
-    if (curr >= secondCloneIdx) {
-      scrollToIndex(block, 0, 'auto'); // ノーアニメで戻す
-      return;
-    }
-
-    // 通常は1枚送る。末尾（N）→ 1* → 2* と進む
     const next = curr + 1;
+
     if (next > maxIdx) {
-      // 念のため上限ガード（通常は secondCloneIdx を超える前にリセットされる）
-      scrollToIndex(block, 0, 'auto');
+      // 末尾のさらに1つ先（理想の連続表示位置）に相当する original 側のインデックスへ瞬時ジャンプ
+      const N = totalOriginal;
+      scrollToIndex(block, next - N, 'auto');
     } else {
       scrollToIndex(block, next);
     }
@@ -255,7 +243,7 @@ function startAutoplay(block, intervalMs = 3000) {
   });
 }
 
-/* ===== 前後ボタン（1枚ずつ。末尾→1*→2*→リセット） ===== */
+/* ===== 前後ボタン（1枚ずつ。末尾→ next - N へ瞬時ジャンプ / 先頭← N - cols へ） ===== */
 function bindNavButtons(block) {
   const prev = q('.carouselmini-nav .prev', block);
   const next = q('.carouselmini-nav .next', block);
@@ -267,29 +255,27 @@ function bindNavButtons(block) {
   if (prev) {
     prev.addEventListener('click', () => {
       const curr = getCurrentIndex(block);
-      const cols = getCols(block);
-      const maxIdx = getMaxIndex(block);
       let target = curr - 1;
-
       if (target < 0) {
-        // 先頭から戻る → 末尾左端へ
-        target = Math.max(0, totalOriginal - cols);
+        // 先頭から戻る → original の末尾スタートへ瞬時ジャンプ
+        target = Math.max(0, totalOriginal - getCols(block));
+        scrollToIndex(block, target, 'auto');
+      } else {
+        scrollToIndex(block, target);
       }
-      scrollToIndex(block, target);
     });
   }
 
   if (next) {
     next.addEventListener('click', () => {
       const curr = getCurrentIndex(block);
-      const secondCloneIdx = totalOriginal + 1;
-      const target = curr + 1;
-
-      if (curr >= secondCloneIdx) {
-        // 2* の次はリセット
-        scrollToIndex(block, 0, 'auto');
+      const maxIdx = getMaxIndex(block);
+      const t = curr + 1;
+      if (t > maxIdx) {
+        // 末尾のさらに先 → next - N へ瞬時ジャンプ
+        scrollToIndex(block, t - totalOriginal, 'auto');
       } else {
-        scrollToIndex(block, target);
+        scrollToIndex(block, t);
       }
     });
   }
@@ -321,9 +307,8 @@ export default function decorate(block) {
   // 元画像を追加
   originals.forEach((it) => list.appendChild(it));
 
-  // 末尾に「1枚目」「2枚目」のクローンを追加
-  const cloneCount = Math.min(2, totalOriginal);
-  for (let i = 0; i < cloneCount; i += 1) {
+  // 末尾に「元画像を丸ごとクローン」して連結（1→2→…→N→1'→2'→…→N'）
+  for (let i = 0; i < totalOriginal; i += 1) {
     const clone = originals[i].cloneNode(true);
     list.appendChild(clone);
   }
@@ -361,6 +346,6 @@ export default function decorate(block) {
     buildIndicators(block);     // ドット＝元画像数
     bindScrollUpdate(block);    // スクロールでドット更新
     bindNavButtons(block);      // 前後ボタン（1枚ずつ）
-    startAutoplay(block, 3000); // ★ 3秒ごとに1枚送り（N→1*→2*→リセット→1…）
+    startAutoplay(block, 3000); // ★ 3秒ごとに1枚送り（ …N → 1' → 2' → … → ジャンプして 1 → 2…）
   });
 }
