@@ -1,7 +1,7 @@
 /* ===== carouselmini =====
    ・imagelink 左ヒーロー幅に自動追従（JSが --carouselmini-width を注入）
-   ・表示枚数: PC=3 / Tablet=2 / Mobile=1
-   ・下部にドットインジケーター（現在ページが分かる）
+   ・表示: PC=3 / Tablet=2 / Mobile=1
+   ・ドットは「画像数」分を表示し、先頭表示中の画像番号をハイライト
 */
 
 .carouselmini {
@@ -12,18 +12,19 @@
   --carouselmini-dot-color: #d0d0d0;
   --carouselmini-dot-active: #333;
 
-  /* JSが注入する幅。なければ100% */
-  width: min(100%, var(--carouselmini-width, 100%));
+  /* ← imagelink左ヒーローの幅をJSがpxで注入。なければ100% */
+  width: var(--carouselmini-width, 100%);
+  max-width: 100%;
   margin: 0;
 }
 
-/* ビューポート（はみ出しを隠す） */
+/* ビューポート */
 .carouselmini .carouselmini-viewport {
   position: relative;
   overflow: hidden;
 }
 
-/* スライド行（実体は「カードの横並びリスト」） */
+/* 横スクロールの土台 */
 .carouselmini .carouselmini-slides {
   display: flex;
   gap: var(--carouselmini-gap);
@@ -40,12 +41,12 @@
 /* スクロールバー隠し（WebKit） */
 .carouselmini .carouselmini-slides::-webkit-scrollbar { display: none; }
 
-/* 表示列数（デフォ1、600px以上で2、900px以上で3） */
+/* 列数（ブレークポイント） */
 .carouselmini { --carouselmini-cols: 1; }
 @media (min-width: 600px) { .carouselmini { --carouselmini-cols: 2; } }
 @media (min-width: 900px) { .carouselmini { --carouselmini-cols: 3; } }
 
-/* 各アイテム幅を自動計算（gapも考慮して等分） */
+/* アイテム幅を等分（gap考慮） */
 .carouselmini .carouselmini-item {
   flex: 0 0 calc(
     (100% - (var(--carouselmini-gap) * (var(--carouselmini-cols) - 1)))
@@ -54,7 +55,7 @@
   scroll-snap-align: start;
 }
 
-/* カード本体（左ヒーローと同じ比率にする：--hero-ratio はJSが注入、なければ16:9） */
+/* カード本体（比率はimagelink左ヒーローに追従。無い場合16:9） */
 .carouselmini .carouselmini-frame {
   position: relative;
   width: 100%;
@@ -81,14 +82,14 @@
 }
 
 .carouselmini .carouselmini-frame img {
-  object-fit: cover; /* きれいにトリミング */
+  object-fit: cover;
 }
 
-/* ナビボタン（左右） */
+/* ナビ（左右） */
 .carouselmini .carouselmini-nav {
   position: absolute;
   inset: 0;
-  pointer-events: none; /* ボタン以外はクリック透過 */
+  pointer-events: none;
 }
 
 .carouselmini .carouselmini-nav button {
@@ -133,7 +134,7 @@
   left: calc(50% - 2px);
 }
 
-/* ===== ドットインジケーター ===== */
+/* ===== ドット（画像数ぶん） ===== */
 .carouselmini .carouselmini-indicators {
   display: flex;
   justify-content: center;
@@ -157,12 +158,13 @@
   background: var(--carouselmini-dot-active);
 }
 
-/* ステータス（視覚 or スクリーンリーダー用） */
+/* 視覚非表示の進捗テキスト（必要ならhidden解除） */
 .carouselmini .carouselmini-status {
   margin-left: 8px;
   font-size: 12px;
   color: #666;
+  display: none;
 }
 
-/* 余白調整（ブロック間） */
+/* ブロック余白 */
 .carouselmini { margin-block: 16px; }

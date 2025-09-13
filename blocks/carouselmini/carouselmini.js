@@ -1,14 +1,16 @@
 /**
  * carouselmini
- * - 横幅は imagelink 左ヒーローに追従（--carouselmini-width を注入）
- * - カード比率は左ヒーローと同じ（--hero-ratio を注入・なければ 16/9）
- * - PC=3 / Tablet=2 / Mobile=1 列でスナップスクロール
- * - 左右ナビ + ドット（ページ単位） + オートプレイ
+ * - 幅：imagelink 左ヒーローに追従（--carouselmini-width を注入）
+ * - 比率：imagelink 左ヒーローに追従（--hero-ratio を注入／無ければ16:9）
+ * - 列数：PC=3 / Tablet=2 / Mobile=1（CSS変数）
+ * - 動作：ページ送り（列数ぶん）でオートプレイ、最後で0に戻ってループ
+ * - ドット：画像数ぶんを生成。先頭に見えている画像の番号をハイライト
  */
 
 function q(sel, root = document) { return root.querySelector(sel); }
 function qa(sel, root = document) { return [...root.querySelectorAll(sel)]; }
 
+/* ===== オーサリングセル → アイテム変換 ===== */
 function normalizeCellToItem(cell) {
   const item = document.createElement('li');
   item.className = 'carouselmini-item';
@@ -16,7 +18,6 @@ function normalizeCellToItem(cell) {
   const frame = document.createElement('div');
   frame.className = 'carouselmini-frame';
 
-  // a/picture/img を優先的に拾う
   const anchor = cell.querySelector('a[href]');
   const pic = cell.querySelector('picture') || cell.querySelector('img');
 
@@ -26,208 +27,203 @@ function normalizeCellToItem(cell) {
     const label = anchor.getAttribute('aria-label') || anchor.textContent?.trim() || '';
     if (label) a.setAttribute('aria-label', label);
     frame.append(a);
-    const target = a;
-    if (pic) target.appendChild(pic);
-  } else {
-    if (pic) frame.appendChild(pic);
+    if (pic) a.appendChild(pic);
+  } else if (pic) {
+    frame.appendChild(pic);
   }
 
   item.append(frame);
   return item;
 }
 
-/* imagelink の左ヒーロー（またはそれ相当）を見つけ、幅と比率を返す */
-function findImagelinkLeft() {
-  const candidates = qa(`
-    .block.imagelink .imagelink-left,
-    .imagelink .imagelink-left,
-    .imagelink > div:first-child,
-    .imagelist .left-hero,
-    .imagelist > div:first-child
-  `);
+/* ===== imagelink 左ヒーロー探索 ===== */
+function findImagelinkLeftNear(block) {
+  // 1) 近い順に前方兄弟を探索
+  let node = block.previousElementSibling;
+  while (node) {
+    const candidate = node.querySelector?.('.imagelink .imagelink-left, .block.imagelink .imagelink-left, .imagelink > div:first-child');
+    if (candidate) return candidate;
+    node = node.previousElementSibling;
+  }
+  // 2) 同じ親の中に無ければ、文書全体から最初の候補を使用
+  return document.querySelector('.block.imagelink .imagelink-left, .imagelink .imagelink-left, .imagelink > div:first-child');
+}
 
-  for (const el of candidates) {
-    const img = el.querySelector('img');
+/* ===== imagelink 同期（幅・比率） ===== */
+function bindImagelinkSync(block) {
+  const el = findImagelinkLeftNear(block);
+  if (!el) return;
+
+  const applyWidth = () => {
     const rect = el.getBoundingClientRect();
     if (rect.width > 0) {
-      const ratio = img
-        ? (Number(img.getAttribute('width')) || img.naturalWidth || 0) /
-          (Number(img.getAttribute('height')) || img.naturalHeight || 1)
-        : 0;
-      return { el, width: rect.width, ratio: ratio || 16 / 9 };
+      block.style.setProperty('--carouselmini-width', `${Math.round(rect.width)}px`);
     }
-  }
-  return null;
-}
-
-/* imagelink 左ヒーローの幅/比率を監視して、carouselmini に渡す */
-function bindImagelinkSync(block) {
-  const apply = () => {
-    const ref = findImagelinkLeft();
-    if (!ref) return;
-    const { el, ratio } = ref;
-
-    // 幅は ResizeObserver で随時更新
-    const updateWidth = () => {
-      const w = el.getBoundingClientRect().width;
-      if (w > 0) block.style.setProperty('--carouselmini-width', `${Math.round(w)}px`);
-    };
-    updateWidth();
-
-    // 比率（カードの aspect-ratio 用）
-    if (ratio > 0) block.style.setProperty('--hero-ratio', ratio.toString());
-
-    const ro = new ResizeObserver(updateWidth);
-    ro.observe(el);
-
-    // 画像が後からロードされた場合
-    const img = el.querySelector('img');
-    if (img && !img.complete) {
-      img.addEventListener('load', () => {
-        updateWidth();
-        const r =
-          (Number(img.getAttribute('width')) || img.naturalWidth || 0) /
-          (Number(img.getAttribute('height')) || img.naturalHeight || 1);
-        if (r > 0) block.style.setProperty('--hero-ratio', r.toString());
-      }, { once: true });
-    }
-
-    window.addEventListener('resize', updateWidth);
   };
 
-  // 周辺ブロックのレイアウトが固まってから参照
-  requestAnimationFrame(apply);
+  const applyRatio = () => {
+    const img = el.querySelector('img');
+    if (!img) return;
+    const w = Number(img.getAttribute('width')) || img.naturalWidth || 0;
+    const h = Number(img.getAttribute('height')) || img.naturalHeight || 0;
+    if (w > 0 && h > 0) {
+      block.style.setProperty('--hero-ratio', (w / h).toString());
+    }
+  };
+
+  // 初期適用
+  applyWidth(); applyRatio();
+
+  // リサイズ追従
+  const ro = new ResizeObserver(applyWidth);
+  ro.observe(el);
+
+  // 画像ロード後にも追従
+  const heroImg = el.querySelector('img');
+  if (heroImg && !heroImg.complete) {
+    heroImg.addEventListener('load', () => { applyWidth(); applyRatio(); }, { once: true });
+  }
+
+  // 画面リサイズ時
+  window.addEventListener('resize', applyWidth);
 }
 
-/* CSS変数から列数・ギャップを取得 */
+/* ===== レイアウト／数値計算 ===== */
 function getCols(block) {
-  const styles = getComputedStyle(block);
-  const cols = parseFloat(styles.getPropertyValue('--carouselmini-cols')) || 1;
+  const s = getComputedStyle(block);
+  const cols = parseFloat(s.getPropertyValue('--carouselmini-cols')) || 1;
   return Math.max(1, Math.round(cols));
 }
-function getGap(block) {
-  const styles = getComputedStyle(block);
-  return parseFloat(styles.getPropertyValue('--carouselmini-gap')) || 0;
-}
 
-/* ページ幅（= アイテム幅×cols + gap×(cols-1)） */
-function getPageWidth(block) {
+function getStepWidth(block) {
   const scroller = q('.carouselmini-slides', block);
-  const item = scroller?.querySelector('.carouselmini-item');
-  if (!scroller || !item) return 0;
-  const cols = getCols(block);
-  const gap = getGap(block);
-  const w = item.getBoundingClientRect().width;
-  return w * cols + gap * (cols - 1);
+  const items = scroller ? qa('.carouselmini-item', scroller) : [];
+  if (!scroller || items.length === 0) return 0;
+  if (items.length >= 2) {
+    // 隣り合うアイテムの offsetLeft 差分をステップ幅とする（gapを含む）
+    return items[1].offsetLeft - items[0].offsetLeft;
+  }
+  // 1枚しか無い場合はその幅
+  return items[0].getBoundingClientRect().width;
 }
 
-/* 現在ページを算出 */
-function getCurrentPage(block) {
+function clampIndex(idx, min, max) {
+  return Math.max(min, Math.min(max, idx));
+}
+
+function getCurrentStartIndex(block) {
   const scroller = q('.carouselmini-slides', block);
-  if (!scroller) return 0;
-  const pageW = getPageWidth(block) || scroller.clientWidth;
-  return Math.round(scroller.scrollLeft / Math.max(1, pageW));
+  const step = getStepWidth(block) || scroller?.clientWidth || 1;
+  return Math.round((scroller?.scrollLeft || 0) / step);
 }
 
-/* 総ページ数（= ceil(totalItems / cols)） */
-function getTotalPages(block) {
+function getMaxStartIndex(block) {
   const scroller = q('.carouselmini-slides', block);
   const totalItems = scroller ? scroller.children.length : 0;
   const cols = getCols(block);
-  return Math.max(1, Math.ceil(totalItems / cols));
+  return Math.max(0, totalItems - cols);
 }
 
-function scrollToPage(block, page, behavior = 'smooth') {
+function scrollToStartIndex(block, idx, behavior = 'smooth') {
   const scroller = q('.carouselmini-slides', block);
   if (!scroller) return;
-
-  const pageW = getPageWidth(block) || scroller.clientWidth;
-  const total = getTotalPages(block);
-  const target = Math.max(0, Math.min(total - 1, page));
-
-  scroller.scrollTo({ left: target * pageW, top: 0, behavior });
-  updateIndicators(block, target, total);
+  const maxIdx = getMaxStartIndex(block);
+  const target = clampIndex(idx, 0, maxIdx);
+  const step = getStepWidth(block) || scroller.clientWidth;
+  scroller.scrollTo({ left: target * step, top: 0, behavior });
+  updateIndicators(block, target); // ドット更新
 }
 
-/* ドットを生成/更新 */
+/* ===== ドット（画像数ぶん） ===== */
 function buildIndicators(block) {
-  let indiWrap = q('.carouselmini-indicators', block);
-  if (!indiWrap) {
-    indiWrap = document.createElement('div');
-    indiWrap.className = 'carouselmini-indicators';
-    // ステータス（「1/5」など）
+  let wrap = q('.carouselmini-indicators', block);
+  if (!wrap) {
+    wrap = document.createElement('div');
+    wrap.className = 'carouselmini-indicators';
     const status = document.createElement('span');
     status.className = 'carouselmini-status';
     status.setAttribute('aria-live', 'polite');
-    status.hidden = true; // 視覚的には非表示。必要なら表示に切替えてOK。
-    indiWrap.append(status);
-    block.append(indiWrap);
+    wrap.append(status);
+    block.append(wrap);
   }
+  // 既存ボタン削除（statusは残す）
+  qa('button', wrap).forEach((b) => b.remove());
 
-  // 既存ボタンを一旦削除（statusは残す）
-  indiWrap.querySelectorAll('button').forEach((b) => b.remove());
+  const scroller = q('.carouselmini-slides', block);
+  const totalItems = scroller ? scroller.children.length : 0;
 
-  const total = getTotalPages(block);
-  for (let i = 0; i < total; i += 1) {
+  for (let i = 0; i < totalItems; i += 1) {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.setAttribute('aria-label', `スライド ${i + 1} / ${total} を表示`);
-    btn.addEventListener('click', () => scrollToPage(block, i));
-    indiWrap.insertBefore(btn, indiWrap.querySelector('.carouselmini-status'));
+    btn.setAttribute('aria-label', `画像 ${i + 1} / ${totalItems} を表示`);
+    btn.addEventListener('click', () => scrollToStartIndex(block, i));
+    wrap.insertBefore(btn, q('.carouselmini-status', wrap));
   }
 
-  // 初期アクティブ
-  updateIndicators(block, 0, total);
+  updateIndicators(block, getCurrentStartIndex(block));
 }
 
-function updateIndicators(block, current, total) {
-  const btns = qa('.carouselmini-indicators button', block);
-  btns.forEach((b, idx) => {
-    if (idx === current) b.setAttribute('aria-current', 'true');
+function updateIndicators(block, currentStartIdx) {
+  const wrap = q('.carouselmini-indicators', block);
+  if (!wrap) return;
+  const scroller = q('.carouselmini-slides', block);
+  const totalItems = scroller ? scroller.children.length : 0;
+
+  const btns = qa('button', wrap);
+  btns.forEach((b, i) => {
+    if (i === currentStartIdx) b.setAttribute('aria-current', 'true');
     else b.removeAttribute('aria-current');
   });
-  const status = q('.carouselmini-status', block);
-  if (status) status.textContent = `${current + 1} / ${total}`;
+
+  const status = q('.carouselmini-status', wrap);
+  if (status) status.textContent = `${Math.min(currentStartIdx + 1, totalItems)} / ${totalItems}`;
 }
 
-/* スクロール追従（ドット更新） */
+/* ===== スクロール追従（ドット更新） ===== */
 function bindScrollUpdate(block) {
   const scroller = q('.carouselmini-slides', block);
   if (!scroller) return;
 
-  let rAF = 0;
+  let raf = 0;
   const onScroll = () => {
-    if (rAF) return;
-    rAF = requestAnimationFrame(() => {
-      rAF = 0;
-      const curr = getCurrentPage(block);
-      updateIndicators(block, curr, getTotalPages(block));
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = 0;
+      updateIndicators(block, getCurrentStartIndex(block));
     });
   };
   scroller.addEventListener('scroll', onScroll);
 
-  // リサイズで列数が変わる → ドット再構築
+  // リサイズで列数や幅が変わる → 再構築
   const ro = new ResizeObserver(() => {
     buildIndicators(block);
-    // ページ幅が変わるため、現在地に再スナップ
-    const curr = getCurrentPage(block);
-    scrollToPage(block, curr, 'auto');
+    // 現在の先頭インデックスへ再スナップ
+    scrollToStartIndex(block, getCurrentStartIndex(block), 'auto');
   });
   ro.observe(block);
 }
 
-/* オートプレイ（ページ単位で送る） */
+/* ===== オートプレイ（列数ぶんページ送り、最後で0に戻る） ===== */
 function startAutoplay(block, intervalMs = 3000) {
-  const total = getTotalPages(block);
-  if (total <= 1) return; // 1ページ以下なら不要
+  const scroller = q('.carouselmini-slides', block);
+  if (!scroller) return;
 
-  // 既存を停止
+  const totalItems = scroller.children.length;
+  const cols = getCols(block);
+  if (totalItems <= cols) return; // 1ページしかないなら不要
+
   if (block._carouselminiTimer) clearInterval(block._carouselminiTimer);
 
   block._carouselminiTimer = setInterval(() => {
-    const curr = getCurrentPage(block);
-    const next = (curr + 1) % getTotalPages(block);
-    scrollToPage(block, next);
+    const curr = getCurrentStartIndex(block);
+    const maxIdx = getMaxStartIndex(block);
+    const next = curr + cols;      // ページ送り（列数ぶん）
+    if (next > maxIdx) {
+      // 末尾を超えたら最初に戻る（ループ）
+      scrollToStartIndex(block, 0);
+    } else {
+      scrollToStartIndex(block, next);
+    }
   }, intervalMs);
 
   const stop = () => {
@@ -238,8 +234,7 @@ function startAutoplay(block, intervalMs = 3000) {
     if (!block._carouselminiTimer) startAutoplay(block, intervalMs);
   };
 
-  // ユーザー操作時は一時停止
-  const scroller = q('.carouselmini-slides', block);
+  // ユーザー操作で一時停止／離れたら再開
   ['mouseenter', 'focusin', 'touchstart', 'pointerdown'].forEach((ev) => {
     block.addEventListener(ev, stop);
     scroller.addEventListener(ev, stop);
@@ -250,16 +245,40 @@ function startAutoplay(block, intervalMs = 3000) {
   });
 }
 
-export default function decorate(block) {
-  // 既存の行/セルをカードに変換
-  const cells = [];
-  [...block.children].forEach((row) => {
-    [...row.children].forEach((cell) => cells.push(cell));
-  });
+/* ===== 前後ボタン（ページ送り＆ループ） ===== */
+function bindNavButtons(block) {
+  const prev = q('.carouselmini-nav .prev', block);
+  const next = q('.carouselmini-nav .next', block);
+  if (prev) {
+    prev.addEventListener('click', () => {
+      const curr = getCurrentStartIndex(block);
+      const cols = getCols(block);
+      const maxIdx = getMaxStartIndex(block);
+      const target = curr - cols;
+      if (target < 0) scrollToStartIndex(block, maxIdx);
+      else scrollToStartIndex(block, target);
+    });
+  }
+  if (next) {
+    next.addEventListener('click', () => {
+      const curr = getCurrentStartIndex(block);
+      const cols = getCols(block);
+      const maxIdx = getMaxStartIndex(block);
+      const target = curr + cols;
+      if (target > maxIdx) scrollToStartIndex(block, 0);
+      else scrollToStartIndex(block, target);
+    });
+  }
+}
 
+/* ===== エントリポイント ===== */
+export default function decorate(block) {
+  // 元セルを収集してアイテム化
+  const cells = [];
+  [...block.children].forEach((row) => { [...row.children].forEach((cell) => cells.push(cell)); });
   const items = cells.map((cell) => normalizeCellToItem(cell));
 
-  // ビューポート + スライドUL 構築
+  // DOM構築
   const viewport = document.createElement('div');
   viewport.className = 'carouselmini-viewport';
 
@@ -267,45 +286,37 @@ export default function decorate(block) {
   list.className = 'carouselmini-slides';
   items.forEach((it) => list.appendChild(it));
 
-  // ナビボタン
   const nav = document.createElement('div');
   nav.className = 'carouselmini-nav';
   nav.innerHTML = `
-    <button type="button" class="prev" aria-label="前のスライド"></button>
-    <button type="button" class="next" aria-label="次のスライド"></button>
+    <button type="button" class="prev" aria-label="前へ"></button>
+    <button type="button" class="next" aria-label="次へ"></button>
   `;
 
-  // 置き換え
+  // 置換
   block.textContent = '';
   viewport.append(list, nav);
   block.append(viewport);
 
-  // ナビイベント（ページ単位）
-  nav.querySelector('.prev')?.addEventListener('click', () => {
-    const curr = getCurrentPage(block);
-    scrollToPage(block, curr - 1);
-  });
-  nav.querySelector('.next')?.addEventListener('click', () => {
-    const curr = getCurrentPage(block);
-    scrollToPage(block, curr + 1);
-  });
-
-  // imagelink の左ヒーローと同期（幅・比率）
+  // imagelink 同期（幅・比率）
   bindImagelinkSync(block);
 
-  // ドット生成 & スクロール追従
+  // ドット（画像数ぶん） & スクロール追従
   buildIndicators(block);
   bindScrollUpdate(block);
 
-  // オートプレイ開始（必要に応じて秒数は調整）
+  // ナビボタン
+  bindNavButtons(block);
+
+  // オートプレイ開始（3秒。必要なら調整）
   startAutoplay(block, 3000);
 
-  // 軽微な最適化とtypo補正
-  block.querySelectorAll('img').forEach((img) => {
+  // 軽微な最適化 & typo補正（webply → webp）
+  qa('img', block).forEach((img) => {
     if (!img.getAttribute('loading')) img.setAttribute('loading', 'lazy');
     if (!img.getAttribute('decoding')) img.setAttribute('decoding', 'async');
   });
-  block.querySelectorAll('source[srcset], img[src]').forEach((el) => {
+  qa('source[srcset], img[src]', block).forEach((el) => {
     const attr = el.tagName === 'SOURCE' ? 'srcset' : 'src';
     const val = el.getAttribute(attr);
     if (val && val.includes('format=webply')) {
