@@ -1,4 +1,4 @@
-/* imagelink block (EDS/Franklin) - hero + right stack (1 + 3) */
+/* imagelink block - 1(左70%) + 3(右30%) */
 .block.imagelink {
   --imagelink-gap: 12px;
   --imagelink-radius: 12px;
@@ -8,23 +8,23 @@
   margin-block: 24px;
 }
 
-/* 2カラム：左70% / 右30% */
+/* レイアウト（必ず2カラムになるようにこのラッパーに依存） */
 .block.imagelink .imagelink-layout {
   display: grid;
-  grid-template-columns: 70% 30%;
+  grid-template-columns: 1fr; /* mobile: 1カラム */
   gap: var(--imagelink-gap);
   align-items: start;
 }
 
-/* モバイルは縦並び（左→右） */
-@media (max-width: 599px) {
+@media (min-width: 600px) {
   .block.imagelink .imagelink-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: 70% 30%;
   }
 }
 
-/* タイル共通 */
-.block.imagelink .imagelink-tile {
+/* 左（1枚目） */
+.block.imagelink .imagelink-left .imagelink-tile,
+.block.imagelink .imagelink-right .imagelink-tile {
   position: relative;
   border-radius: var(--imagelink-radius);
   overflow: hidden;
@@ -42,38 +42,37 @@
   position: relative;
 }
 
-/* ===== 左ヒーロー（1枚目）: 高さは画像の自然比率に任せる ===== */
-.block.imagelink .left-hero .imagelink-thumb img,
-.block.imagelink .left-hero .imagelink-thumb picture,
-.block.imagelink .left-hero .imagelink-thumb {
+.block.imagelink .imagelink-thumb { line-height: 0; }
+
+.block.imagelink .imagelink-thumb picture,
+.block.imagelink .imagelink-thumb img {
   display: block;
   width: 100%;
-  height: auto;      /* ← ここがポイント：左は自動高さ */
-  line-height: 0;
+  height: auto; /* 左側は自然比率 */
 }
-.block.imagelink .left-hero .imagelink-thumb img {
+
+.block.imagelink .imagelink-left .imagelink-thumb img {
   object-fit: cover;
 }
 
-/* ===== 右スタック（2〜4枚目）: JSが .stack-item に高さ(px)を付与 ===== */
-.block.imagelink .right-stack {
+/* 右（2–4枚）は縦3分割。高さはJSで左に同期し、各アイテムを等分 */
+.block.imagelink .imagelink-right {
   display: flex;
   flex-direction: column;
   gap: var(--imagelink-gap);
-  /* 高さはJSで左と一致させる */
+  /* height はJSで設定 */
 }
-.block.imagelink .right-stack .stack-item {
-  flex: 0 0 auto;  /* JSで明示高さを設定 */
+
+.block.imagelink .imagelink-right .stack-item {
+  flex: 0 0 auto; /* JSでpx高さを入れる */
   min-height: 60px;
 }
-.block.imagelink .right-stack .stack-item .imagelink-thumb,
-.block.imagelink .right-stack .stack-item .imagelink-thumb picture,
-.block.imagelink .right-stack .stack-item .imagelink-thumb img {
-  display: block;
+
+.block.imagelink .imagelink-right .stack-item .imagelink-thumb picture,
+.block.imagelink .imagelink-right .stack-item .imagelink-thumb img {
   width: 100%;
-  height: 100%;     /* ← 右側は「与えられた高さをしっかり埋める」 */
-  line-height: 0;
-  object-fit: cover;
+  height: 100%;      /* 与えた高さをきっちり埋める */
+  object-fit: cover; /* 比率を崩さずトリミング */
 }
 
 /* ホバー演出（ポインタ環境のみ） */
@@ -86,16 +85,18 @@
     opacity: 0;
     transition: opacity .2s ease;
   }
-  .block.imagelink .imagelink-tile:hover {
+  .block.imagelink .imagelink-left .imagelink-tile:hover,
+  .block.imagelink .imagelink-right .imagelink-tile:hover {
     transform: translateY(-2px);
     box-shadow: var(--imagelink-shadow-hover);
   }
-  .block.imagelink .imagelink-tile:hover .imagelink-link::after {
+  .block.imagelink .imagelink-left .imagelink-tile:hover .imagelink-link::after,
+  .block.imagelink .imagelink-right .imagelink-tile:hover .imagelink-link::after {
     opacity: 1;
   }
 }
 
-/* キーボードフォーカス */
+/* フォーカス可視化 */
 .block.imagelink .imagelink-link:focus-visible {
   outline: 3px solid currentColor;
   outline-offset: -3px;

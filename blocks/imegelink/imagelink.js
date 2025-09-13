@@ -1,31 +1,33 @@
 /**
- * imagelink block (EDS/Franklin)
- * オーサリング: 4行1列（行=1..4）。
- * レイアウト: 左に1行目(幅70%)、右に2..4行目を縦3分割(幅30%)。
- * 調整: 左の実高を取得し、右を同じ高さに。右は3等分して綺麗に収める。
- * 画像: loading="lazy", decoding="async" を自動付与。
+ * imagelink block
+ * Authoring: 4行1列（各行に画像＋任意でリンク）
+ * Render: 左=1行目(70%) / 右=2〜4行目を縦3分割(30%)
+ * 右の高さは左画像の表示高に自動同期して等分
  */
+
+function $(sel, root = document) { return root.querySelector(sel); }
+function $all(sel, root = document) { return [...root.querySelectorAll(sel)]; }
 
 function findLinkAndPicture(cell) {
   const link = cell.querySelector('a[href]');
-  const picture = cell.querySelector('picture') || cell.querySelector('img');
-  let normalizedPicture = null;
+  const picOrImg = cell.querySelector('picture') || cell.querySelector('img');
+  let picture = null;
 
-  if (picture) {
-    if (picture.tagName.toLowerCase() === 'picture') {
-      normalizedPicture = picture;
+  if (picOrImg) {
+    if (picOrImg.tagName.toLowerCase() === 'picture') {
+      picture = picOrImg;
     } else {
-      // <img>のみ → <picture>でラップ
+      // <img>のみ → <picture>にラップ
       const pic = document.createElement('picture');
-      picture.replaceWith(pic);
-      pic.append(picture);
-      normalizedPicture = pic;
+      picOrImg.replaceWith(pic);
+      pic.append(picOrImg);
+      picture = pic;
     }
   }
-  return { link, picture: normalizedPicture };
+  return { link, picture };
 }
 
-function ensureImgPerfAttrs(picture) {
+function perfAttrs(picture) {
   if (!picture) return;
   const img = picture.querySelector('img');
   if (img) {
@@ -38,127 +40,111 @@ function buildTile({ href, picture, label, extraClass = '' }) {
   const tile = document.createElement('div');
   tile.className = `imagelink-tile ${extraClass}`.trim();
 
-  const container = document.createElement('div');
-  container.className = 'imagelink-thumb';
+  const thumb = document.createElement('div');
+  thumb.className = 'imagelink-thumb';
 
+  let wrap = thumb;
   if (href) {
     const a = document.createElement('a');
     a.className = 'imagelink-link';
     a.href = href;
     if (label) a.setAttribute('aria-label', label);
-    a.append(container);
-    tile.append(a);
-  } else {
-    tile.append(container);
+    a.append(thumb);
+    wrap = a;
   }
+  if (picture) thumb.append(picture);
 
-  if (picture) container.append(picture);
+  tile.append(wrap);
   return tile;
 }
 
-function deriveLabel(cell, link, picture) {
+function labelFrom(cell, link, picture) {
   const img = picture && picture.querySelector('img');
   const alt = img && img.getAttribute('alt');
   const linkText = link && link.textContent && link.textContent.trim();
   return (alt && alt.trim()) || linkText || '';
 }
 
-/* 左右の高さ同期：左画像の表示高 -> 右カラム全体、右の各サムネは等分 */
-function syncHeights(root) {
-  const leftImg = root.querySelector('.left-hero img');
-  const right = root.querySelector('.right-stack');
+function syncHeights(block) {
+  const leftImg = block.querySelector('.imagelink-left img');
+  const right = block.querySelector('.imagelink-right');
   if (!leftImg || !right) return;
 
-  const set = () => {
-    // 表示サイズから計測（CSSスケール後の実高）
-    const leftH = leftImg.getBoundingClientRect().height;
-    if (leftH <= 0) return;
-
-    // 右全体を左と同じ高さに
-    right.style.height = `${leftH}px`;
-
-    // 右の3枚を等分（ギャップを差し引いて均等割り）
+  const apply = () => {
+    const h = leftImg.getBoundingClientRect().height;
+    if (h <= 0) return;
+    right.style.height = `${h}px`;
     const items = right.querySelectorAll('.stack-item');
     const gap = parseFloat(getComputedStyle(right).gap || '0');
-    const totalGap = gap * Math.max(0, items.length - 1);
-    const each = Math.max(60, (leftH - totalGap) / Math.max(1, items.length));
-
-    items.forEach((it) => { it.style.height = `${each}px`; });
+    const each = Math.max(60, (h - gap * Math.max(0, items.length - 1)) / Math.max(1, items.length));
+    items.forEach((el) => { el.style.height = `${each}px`; });
   };
 
-  // 初期／ロード後／リサイズで再計算
-  const recalcs = () => { requestAnimationFrame(set); };
+  const rafApply = () => requestAnimationFrame(apply);
 
-  if (leftImg.complete) recalcs();
-  leftImg.addEventListener('load', recalcs, { once: true });
+  if (leftImg.complete) rafApply();
+  else leftImg.addEventListener('load', rafApply, { once: true });
 
-  // 画像のソース切替やレイアウト変化にも追従
-  const ro = new ResizeObserver(recalcs);
+  // リサイズやフォントロード等で再計測
+  const ro = new ResizeObserver(rafApply);
   ro.observe(leftImg);
-  window.addEventListener('resize', recalcs);
+  window.addEventListener('resize', rafApply);
 
-  // 右側の画像ロードでも一応再同期
-  root.querySelectorAll('.right-stack img').forEach((img) => {
-    if (!img.complete) img.addEventListener('load', recalcs, { once: true });
+  // 右側の画像ロードでも再同期
+  block.querySelectorAll('.imagelink-right img').forEach((img) => {
+    if (!img.complete) img.addEventListener('load', rafApply, { once: true });
   });
 }
 
 export default function decorate(block) {
-  // 元の4行1列セルを収集
+  // 元セル取得（4行1列想定）
   const cells = [];
-  [...block.children].forEach((row) => {
-    [...row.children].forEach((cell) => cells.push(cell));
-  });
+  [...block.children].forEach((row) => [...row.children].forEach((cell) => cells.push(cell)));
 
-  // 1..4枚だけ採用
+  // 4枚だけ採用
   const entries = cells.slice(0, 4).map((cell) => {
     const { link, picture } = findLinkAndPicture(cell);
     if (!picture) return null;
-    ensureImgPerfAttrs(picture);
+    perfAttrs(picture);
     const href = link ? link.getAttribute('href') : null;
-    const label = deriveLabel(cell, link, picture);
+    const label = labelFrom(cell, link, picture);
     return { href, picture, label };
   }).filter(Boolean);
 
-  if (!entries[0]) {
-    block.textContent = '';
-    return;
-  }
+  if (!entries.length) { block.textContent = ''; return; }
 
-  // DOM 再構築
+  // レイアウトDOMを必ず生成
   const layout = document.createElement('div');
   layout.className = 'imagelink-layout';
 
-  // 左（1枚目）
-  const left = buildTile({
-    href: entries[0].href,
-    picture: entries[0].picture,
-    label: entries[0].label,
-    extraClass: 'left-hero',
-  });
-  layout.append(left);
+  // 左
+  const leftWrap = document.createElement('div');
+  leftWrap.className = 'imagelink-left';
+  leftWrap.append(buildTile({
+    href: entries[0]?.href || null,
+    picture: entries[0]?.picture || null,
+    label: entries[0]?.label || '',
+  }));
+  layout.append(leftWrap);
 
-  // 右（2..4枚）
-  const right = document.createElement('div');
-  right.className = 'right-stack';
-
+  // 右
+  const rightWrap = document.createElement('div');
+  rightWrap.className = 'imagelink-right';
   [entries[1], entries[2], entries[3]].forEach((ent) => {
     if (!ent) return;
-    const item = buildTile({
+    rightWrap.append(buildTile({
       href: ent.href,
       picture: ent.picture,
       label: ent.label,
       extraClass: 'stack-item',
-    });
-    right.append(item);
+    }));
   });
+  layout.append(rightWrap);
 
-  layout.append(right);
-
-  // 旧コンテンツを入れ替え
+  // 置き換え
   block.textContent = '';
   block.append(layout);
 
-  // 高さ同期
+  // 同期
   syncHeights(block);
 }
