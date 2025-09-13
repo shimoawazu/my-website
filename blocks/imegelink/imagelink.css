@@ -1,28 +1,29 @@
-/* imagelink block (Edge Delivery Services / Franklin) */
+/* imagelink block (EDS/Franklin) - hero + right stack (1 + 3) */
 .block.imagelink {
-  --imagelink-gap: 16px;
+  --imagelink-gap: 12px;
   --imagelink-radius: 12px;
   --imagelink-shadow: 0 2px 8px rgba(0,0,0,.06);
   --imagelink-shadow-hover: 0 6px 16px rgba(0,0,0,.12);
   --imagelink-overlay: rgba(0,0,0,.08);
+  margin-block: 24px;
 }
 
-.block.imagelink .imagelink-grid {
+/* 2カラム：左70% / 右30% */
+.block.imagelink .imagelink-layout {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 70% 30%;
   gap: var(--imagelink-gap);
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  align-items: start;
 }
 
-/* >= 600px: 2 columns */
-@media (min-width: 600px) {
-  .block.imagelink .imagelink-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+/* モバイルは縦並び（左→右） */
+@media (max-width: 599px) {
+  .block.imagelink .imagelink-layout {
+    grid-template-columns: 1fr;
   }
 }
 
+/* タイル共通 */
 .block.imagelink .imagelink-tile {
   position: relative;
   border-radius: var(--imagelink-radius);
@@ -41,18 +42,34 @@
   position: relative;
 }
 
-.block.imagelink .imagelink-thumb {
-  display: block;
-  width: 100%;
-  height: 100%;
-  line-height: 0;
-}
-
+.block.imagelink .imagelink-thumb,
 .block.imagelink .imagelink-thumb picture,
 .block.imagelink .imagelink-thumb img {
   display: block;
   width: 100%;
-  height: auto; /* 画像の元比率を維持 */
+  height: 100%;
+}
+
+.block.imagelink .imagelink-thumb img {
+  object-fit: cover; /* きれいにトリミング */
+}
+
+/* 左のヒーロー（1行目） */
+.block.imagelink .left-hero {
+  height: auto; /* 画像に合わせる（実高はJS同期で右と一致） */
+}
+
+/* 右のスタック（2–4行目） */
+.block.imagelink .right-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--imagelink-gap);
+  /* 高さはJSで左画像に同期 */
+}
+
+.block.imagelink .right-stack .stack-item {
+  flex: 0 0 auto;  /* JSで明示高さを設定 */
+  min-height: 40px; /* 極端な小画面の安全策 */
 }
 
 /* ホバー演出（ポインタ環境のみ） */
@@ -74,19 +91,8 @@
   }
 }
 
-/* 画像が低解像度でも見栄えを保つための安全策 */
-.block.imagelink .imagelink-thumb img {
-  object-fit: cover; /* 元画像が小さい場合のトリミング保護 */
-  width: 100%;
-}
-
-/* キーボードフォーカス可視化 */
+/* キーボードフォーカス */
 .block.imagelink .imagelink-link:focus-visible {
   outline: 3px solid currentColor;
   outline-offset: -3px;
-}
-
-/* 可変余白（必要なら上位で上書きください） */
-.block.imagelink {
-  margin-block: 24px;
 }
