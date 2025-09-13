@@ -1,0 +1,69 @@
+/* ===== imagelink2 =====
+   ・高さ：carouselmini の画像高さに同期（JSが --imagelink2-height を注入）
+   ・幅　：imagelink の右カラム幅に同期（JSが --imagelink2-width を注入）
+   ・配置：JS側で imagelink 右カラムの直下にブロックを移動して挿入
+   ・内容：画像リンク2枚を縦に50%ずつ（gapあり）
+*/
+
+.imagelink2 {
+  --imagelink2-gap: 12px;
+  --imagelink2-radius: 12px;
+  --imagelink2-bg: #ffffff;
+
+  /* JSが注入。無ければ100%/auto */
+  width: var(--imagelink2-width, 100%);
+  height: var(--imagelink2-height, auto);
+
+  /* 右カラムと少し離す */
+  margin-top: 12px;
+}
+
+/* リスト全体（縦2分割） */
+.imagelink2 .imagelink2-list {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: var(--imagelink2-gap);
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 各アイテム枠 */
+.imagelink2 .imagelink2-item {
+  position: relative;
+  overflow: hidden;
+  background: var(--imagelink2-bg);
+  border-radius: var(--imagelink2-radius);
+  box-shadow: 0 2px 8px rgba(0 0 0 / 6%);
+}
+
+/* 画像リンクが枠いっぱいに広がる */
+.imagelink2 .imagelink2-item > a {
+  display: block;
+  width: 100%;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
+/* picture / img を完全フィット */
+.imagelink2 .imagelink2-item picture,
+.imagelink2 .imagelink2-item img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.imagelink2 .imagelink2-item img {
+  object-fit: cover;
+}
+
+/* 小さめ画面でも見た目を維持 */
+@media (max-width: 599.98px) {
+  .imagelink2 {
+    --imagelink2-gap: 8px;
+    --imagelink2-radius: 10px;
+  }
+}
