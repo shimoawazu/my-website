@@ -1,4 +1,4 @@
-/* imagelink block - 左(1枚) + 右(3枚) レイアウト */
+/* imagelink block - 左(1枚) + 右(3枚) */
 .block.imagelink {
   --imagelink-gap: 12px;
   --imagelink-radius: 12px;
@@ -8,20 +8,26 @@
   margin-block: 24px;
 }
 
-/* レイアウト：mobile は1カラム、>= 640px で 70% / 30% の2カラム */
+/* レイアウト（SPは1列、>= 768pxで 70%/30% の2列） */
 .block.imagelink .imagelink-layout {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--imagelink-gap);
   align-items: start;
 }
-@media (min-width: 640px) {
+@media (min-width: 768px) {
   .block.imagelink .imagelink-layout {
     grid-template-columns: 70% 30%;
   }
 }
 
-/* 左右各カラムの中身（タイル）共通 */
+/* 左右のカラムラッパー */
+.block.imagelink .imagelink-left,
+.block.imagelink .imagelink-right {
+  min-width: 0;
+}
+
+/* タイル共通 */
 .block.imagelink .imagelink-tile {
   position: relative;
   border-radius: var(--imagelink-radius);
@@ -42,19 +48,19 @@
 
 .block.imagelink .imagelink-thumb { line-height: 0; }
 
-/* 左（1枚目）は高さ=画像の自然比率に任せる（16:9相当でもOK） */
+/* ===== 左：画像の自然比率に任せる（例: 1680x945 ≈ 16:9） ===== */
 .block.imagelink .imagelink-left .imagelink-thumb,
 .block.imagelink .imagelink-left .imagelink-thumb picture,
 .block.imagelink .imagelink-left .imagelink-thumb img {
   display: block;
   width: 100%;
-  height: auto;
+  height: auto;      /* 左は自動高さ */
 }
 .block.imagelink .imagelink-left .imagelink-thumb img {
   object-fit: cover;
 }
 
-/* 右（2〜4枚）は縦3分割。高さはJSで左に同期し、各アイテムを等分 */
+/* ===== 右：縦3分割。高さはJSで左に同期し、各アイテムを等分 ===== */
 .block.imagelink .imagelink-right {
   display: flex;
   flex-direction: column;
@@ -62,19 +68,19 @@
   /* height は JS が設定 */
 }
 .block.imagelink .imagelink-right .stack-item {
-  flex: 0 0 auto; /* JS で px 高さを入れる */
-  min-height: 60px;
+  flex: 0 0 auto;   /* JS で px 高さを与える */
+  min-height: 60px; /* 安全策（極端に狭い時） */
 }
 .block.imagelink .imagelink-right .stack-item .imagelink-thumb,
 .block.imagelink .imagelink-right .stack-item .imagelink-thumb picture,
 .block.imagelink .imagelink-right .stack-item .imagelink-thumb img {
   display: block;
   width: 100%;
-  height: 100%;      /* 与えた高さを埋める */
-  object-fit: cover; /* 比率を崩さずトリミング */
+  height: 100%;      /* 与えられた高さを埋める */
+  object-fit: cover; /* トリミングで整える */
 }
 
-/* ホバー演出（ポインタ環境のみ） */
+/* ホバー演出（任意） */
 @media (hover: hover) and (pointer: fine) {
   .block.imagelink .imagelink-link::after {
     content: "";
@@ -93,7 +99,7 @@
   }
 }
 
-/* フォーカス可視化 */
+/* キーボードフォーカス */
 .block.imagelink .imagelink-link:focus-visible {
   outline: 3px solid currentColor;
   outline-offset: -3px;
