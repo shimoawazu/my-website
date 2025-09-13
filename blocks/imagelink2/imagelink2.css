@@ -1,15 +1,9 @@
-/* ===== imagelink2 (右横配置 + 高さ同期) ============================== */
-/* 役割：
-   - carouselmini の右横に縦2枚を表示
-   - 高さは carouselmini の表示高に同期（JS が --i2-item-h をセット）
-   - 幅は imagelink の左右幅に同期（JS がラッパに --cm-left-w/--cm-right-w をセット）
-===================================================================== */
-
-/* 横並び用ラッパ（JSが生成して2ブロックを内包） */
+/* ===== imagelink2：carouselmini の右横に固定配置 ===================== */
+/* 横並び用のラッパ（JSが生成） */
 .cm-inline-row {
-  --cm-gap: 16px;             /* 左右間のすき間 */
-  --cm-left-w: 640px;         /* フォールバック：左（carouselmini）幅 */
-  --cm-right-w: 320px;        /* フォールバック：右（imagelink2）幅 */
+  --cm-gap: 16px;      /* 左右のすき間 */
+  --cm-left-w: 640px;  /* フォールバック（JSが上書き） */
+  --cm-right-w: 320px; /* フォールバック（JSが上書き） */
 
   display: flex;
   align-items: stretch;
@@ -17,51 +11,48 @@
   width: 100%;
 }
 
-/* 左カラム：carouselmini を固定幅で */
+/* 左カラム：carouselmini は imagelink の左列幅に合わせる */
 .cm-inline-row > .carouselmini {
   flex: 0 0 var(--cm-left-w);
   max-width: var(--cm-left-w);
   min-width: 0;
+  margin: 0 !important;
 }
 
-/* 右カラム：imagelink2 を固定幅で右端に */
+/* 右カラム：imagelink2 は imagelink の右列幅に合わせて右側に */
 .cm-inline-row > .imagelink2 {
   flex: 0 0 var(--cm-right-w);
   max-width: var(--cm-right-w);
   min-width: 0;
-  margin-left: auto; /* 右端寄せ */
+  margin-left: auto; /* 行の右端に寄せる */
+  margin: 0 !important;
 }
 
-/* ===== imagelink2 本体 ===== */
+/* imagelink2 の中身（縦2枚） */
 .imagelink2 {
-  --i2-gap: 8px;      /* 上下2枚のすき間（JSが読み取る） */
-  --i2-item-h: auto;  /* JSが (carouselminiHeight - gap)/2 をセット */
-
+  --i2-gap: 8px;
   display: flex;
   flex-direction: column;
   gap: var(--i2-gap);
-  align-items: stretch;
 }
 
-/* セルのa/picture をブロック化して高さ適用可能に */
+/* 画像は横幅いっぱい・高さは自動（必要ならJSで同期可能） */
 .imagelink2 a,
 .imagelink2 picture {
   display: block;
   width: 100%;
-  height: var(--i2-item-h);
-  overflow: hidden;
+}
+
+.imagelink2 img,
+.imagelink2 picture img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
   border-radius: 8px;
 }
 
-.imagelink2 picture img,
-.imagelink2 img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover; /* 歪み防止、必要なら contain に変更 */
-}
-
-/* ===== レスポンシブ（狭幅では縦積み） ===== */
+/* 狭幅では縦積みにフォールバック */
 @media (max-width: 899.98px) {
   .cm-inline-row {
     flex-direction: column;
@@ -71,5 +62,4 @@
     flex: 0 0 auto;
     max-width: 100%;
   }
-  .imagelink2 { --i2-gap: 6px; }
 }
