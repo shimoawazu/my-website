@@ -1,18 +1,17 @@
 /**
  * carouselmini
- * - ブロック内の行（div）から最後の2行を「画像リンク」列へ、残りを「スライド」へ変換
- * - カルーセルは最後の2行を除いたスライドのみで自動再生（3秒）、無限ループ
- * - 幅は imagelink の左（大）/右（小）の実幅に同期（ResizeObserver）
- * - 高さは左スライドで「実際に見えている画像の高さ」を取得し、右列に同期
+ * - ブロック内の行から「最後の2行」を右側の画像リンク列へ、残りを左のスライダーへ
+ * - 左スライダーは 3 枚同時表示（--cm-per-view = 3）
+ * - 無限ループ（クローン方式）＆ 3秒オートプレイ（ホバー/フォーカスで一時停止）
+ * - 幅は imagelink の左/右カラム幅に同期、右列は右端揃え
+ * - 右列の高さは左スライダーの“表示中の画像”の実高さに同期
  */
 
 function q(sel, root = document) { return root.querySelector(sel); }
 function qa(sel, root = document) { return [...root.querySelectorAll(sel)]; }
-const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 
-/* ===== imagelink 近傍の列幅を取得 ===== */
+/* ===== 近傍 imagelink から左右の幅を測定 ===== */
 function findImagelinkNear(block) {
-  // 近傍の兄弟方向に走査 → 全体
   const pick = (node) => node?.classList?.contains('imagelink') ? node : node?.querySelector?.('.imagelink');
   let n = block.previousElementSibling;
   while (n) { const r = pick(n); if (r) return r; n = n.previousElementSibling; }
@@ -23,29 +22,29 @@ function findImagelinkNear(block) {
 
 function measureColumnsFromImagelink(root) {
   if (!root) return { left: 0, right: 0 };
-  // 左 = 最初の子、右 = 最後の子（右列の1枚分の実幅とみなす）
   const leftCol = root.querySelector(':scope > div:first-child') || root.firstElementChild;
-  const rightAny = root.querySelector(':scope > div:last-child') || root.lastElementChild;
+  const rightCol = root.querySelector(':scope > div:last-child') || root.lastElementChild;
   const left = Math.round(leftCol?.getBoundingClientRect().width || 0);
-  const right = Math.round(rightAny?.getBoundingClientRect().width || 0);
+  const right = Math.round(rightCol?.getBoundingClientRect().width || 0);
   return { left, right };
 }
 
-/* ===== “可視中”のスライド内画像を特定 ===== */
+/* ===== 可視中の画像（左スライダー内） ===== */
 function isVisible(el) {
   if (!el) return false;
   const r = el.getBoundingClientRect();
   return r.width > 0 && r.height > 0 && r.bottom > 0 && r.right > 0;
 }
 function currentVisibleImg(leftRoot) {
-  // 現在表示中スライドの img を拾う
-  const img = leftRoot.querySelector('.carouselmini-slide--active img') ||
-              leftRoot.querySelector('.carouselmini-slide picture > img') ||
-              leftRoot.querySelector('.carouselmini-slide img');
-  return img && isVisible(img) ? img : img; // 候補があれば返す
+  // 「アクティブ」クラス優先、なければ先頭の img
+  return (
+    leftRoot.querySelector('.carouselmini-slide--active img') ||
+    leftRoot.querySelector('.carouselmini-slide picture > img') ||
+    leftRoot.querySelector('.carouselmini-slide img')
+  );
 }
 
-/* ===== 行を Slide / Link に正規化 ===== */
+/* ===== 行正規化 ===== */
 function makeSlideFromRow(row) {
   const slide = document.createElement('div');
   slide.className = 'carouselmini-slide';
@@ -55,8 +54,8 @@ function makeSlideFromRow(row) {
 }
 
 function makeLinkFromRow(row) {
-  const linkWrap = document.createElement('div');
-  linkWrap.className = 'carouselmini-link';
+  const wrap = document.createElement('div');
+  wrap.className = 'carouselmini-link';
   const aSrc = row.querySelector('a[href]');
   const pic = row.querySelector('picture') || row.querySelector('img');
   const a = document.createElement('a');
@@ -64,8 +63,8 @@ function makeLinkFromRow(row) {
   const label = aSrc?.getAttribute('aria-label') || aSrc?.textContent?.trim();
   if (label) a.setAttribute('aria-label', label);
   if (pic) a.appendChild(pic);
-  linkWrap.appendChild(a);
-  return linkWrap;
+  wrap.appendChild(a);
+  return wrap;
 }
 
 function perfTweakImages(root) {
@@ -80,57 +79,17 @@ function perfTweakImages(root) {
   });
 }
 
-/* ===== スライダー（無限ループ：クローン方式） ===== */
-function buildInfiniteTrack(track, slides) {
-  // 先頭末尾にクローンを追加
-  const first = slides[0].cloneNode(true);
-  const last  = slides[slides.length - 1].cloneNode(true);
-  track.appendChild(first);                           // 末尾クローン（先頭）
-  track.insertBefore(last, track.firstChild);         // 先頭クローン（末尾）
-  return { headClone: last, tailClone: first };
-}
-
-function setActiveSlideState(leftRoot, indexReal, total) {
-  // indexReal: 0..total-1（実スライド番号）
-  qa('.carouselmini-slide', leftRoot).forEach((s) => s.classList.remove('carouselmini-slide--active'));
-  const slidesOnly = qa('.carouselmini-track > .carouselmini-slide', leftRoot)
-    .filter((_, i, arr) => i !== 0 && i !== arr.length - 1); // クローン除外
-  const active = slidesOnly[indexReal];
-  if (active) active.classList.add('carouselmini-slide--active');
-
-  // インジケーター
-  qa('.carouselmini-indicators button', leftRoot).forEach((b, i) => {
-    b.setAttribute('aria-current', i === indexReal ? 'true' : 'false');
-  });
-}
-
-function startAutoplay(ctx, intervalMs = 3000) {
-  const { leftRoot } = ctx;
-  const stop = () => { if (ctx.timer) clearInterval(ctx.timer); ctx.timer = null; };
-  const go = () => {
-    stop();
-    ctx.timer = setInterval(() => ctx.goto(ctx.index + 1), intervalMs);
-  };
-  leftRoot.addEventListener('mouseenter', stop);
-  leftRoot.addEventListener('focusin', stop);
-  leftRoot.addEventListener('mouseleave', go);
-  leftRoot.addEventListener('focusout', go);
-  go();
-  ctx.stop = stop;
-  ctx.go = go;
-}
-
 /* ===== メイン ===== */
 export default function decorate(block) {
+  // 1) オーサリング行を取得
   const rows = qa(':scope > div', block);
   if (rows.length === 0) return;
 
-  // 分割：最後の2行をリンク、残りをスライド
-  const linkCount = Math.min(2, rows.length);
-  const linkRows = rows.slice(-linkCount);
-  const slideRows = rows.slice(0, rows.length - linkCount);
+  // 2) 「最後の2行」をリンク列へ、残りをスライダーへ
+  const linkRows = rows.slice(-2);
+  const slideRows = rows.slice(0, Math.max(0, rows.length - 2));
 
-  // ベース構造
+  // 3) ベース DOM 構造
   const pair = document.createElement('div');
   pair.className = 'carouselmini-pair';
 
@@ -153,119 +112,135 @@ export default function decorate(block) {
   pair.appendChild(leftRoot);
   pair.appendChild(rightRoot);
 
-  // 既存の行を取り外してからペアを入れる
+  // 既存 row を除去し、pair を設置
   rows.forEach((r) => r.remove());
   block.appendChild(pair);
 
-  // スライド生成（最後の2枚を除く）
-  const slides = slideRows.map((r) => makeSlideFromRow(r));
+  // 4) スライド/リンク生成
+  const slides = slideRows.map(makeSlideFromRow);
   slides.forEach((s) => track.appendChild(s));
 
-  // リンク生成（最後の2枚）
-  const links = linkRows.map((r) => makeLinkFromRow(r));
+  const links = linkRows.map(makeLinkFromRow);
   links.forEach((l) => rightRoot.appendChild(l));
 
   // 画像の軽微最適化
   perfTweakImages(block);
 
-  // スライドが1枚以下ならカルーセルせず終了（インジケータ非表示）
-  if (slides.length <= 1) {
+  // 5) 3枚同時表示のためのセットアップ
+  const perView = 3; // 必須要件
+  block.style.setProperty('--cm-per-view', String(perView));
+
+  // スライドが perView 未満ならオート/インジケータ無効化（そのまま静的表示）
+  if (slides.length === 0) {
     indicators.style.display = 'none';
+    return;
   }
 
-  // 無限ループ準備（クローン追加）
-  let headClone, tailClone;
-  if (slides.length >= 1) {
-    const clones = buildInfiniteTrack(track, slides);
-    headClone = clones.headClone; // 先頭側にある「末尾クローン」
-    tailClone = clones.tailClone; // 末尾側にある「先頭クローン」
-  }
+  // クローン追加（無限ループ用）：前後に perView 枚
+  const addClones = (count) => {
+    const len = slides.length;
+    // 先頭側（左端）に末尾から count 枚
+    for (let i = 0; i < count; i += 1) {
+      const src = slides[len - count + i] || slides[(len - 1 + i) % len];
+      track.insertBefore(src.cloneNode(true), track.firstChild);
+    }
+    // 末尾側（右端）に先頭から count 枚
+    for (let i = 0; i < count; i += 1) {
+      const src = slides[i % len];
+      track.appendChild(src.cloneNode(true));
+    }
+  };
+  const cloneCount = Math.min(perView, slides.length);
+  addClones(cloneCount);
 
-  // インジケーター
-  for (let i = 0; i < slides.length; i += 1) {
-    const liBtn = document.createElement('li');
+  // インジケーター（実スライド枚数ぶん）
+  slides.forEach((_, i) => {
+    const li = document.createElement('li');
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.setAttribute('aria-label', `Show slide ${i + 1}`);
-    btn.addEventListener('click', () => ctx.goto(i));
-    liBtn.appendChild(btn);
-    indicators.appendChild(liBtn);
+    btn.addEventListener('click', () => goto(i + cloneCount)); // 仮想indexへ移動
+    li.appendChild(btn);
+    indicators.appendChild(li);
+  });
+
+  // 6) ステートと移動制御（仮想index = クローンを含む先頭からの位置）
+  const unit = 100 / perView;                 // 1スライドぶんの%移動量
+  const virtualStart = cloneCount;            // 実スライドの先頭位置
+  let virtualIndex = virtualStart;            // 現在の仮想index（左端のスライド基準）
+  let timer = null;
+
+  function setActiveByVirtualIndex() {
+    const realTotal = slides.length;
+    const realIndex = ((virtualIndex - cloneCount) % realTotal + realTotal) % realTotal;
+    // アクティブスライドの見た目（任意）
+    qa('.carouselmini-slide', leftRoot).forEach((s) => s.classList.remove('carouselmini-slide--active'));
+    // クローンを含むノード配列
+    const allSlides = qa('.carouselmini-track > .carouselmini-slide', leftRoot);
+    const target = allSlides[virtualIndex];
+    if (target) target.classList.add('carouselmini-slide--active');
+
+    // インジケーター
+    qa('.carouselmini-indicators button', leftRoot).forEach((b, i) => {
+      b.setAttribute('aria-current', i === realIndex ? 'true' : 'false');
+    });
   }
 
-  // ステート
-  const ctx = {
-    block,
-    leftRoot,
-    viewport,
-    track,
-    slides,
-    total: slides.length,
-    index: 0, // 実スライドのインデックス（0..total-1）
-    widthPx: 0,
-    moving: false,
-    goto: (toIndex) => {
-      if (ctx.total === 0) return;
-      const dir = toIndex > ctx.index ? 1 : -1;
-      const targetReal = ((toIndex % ctx.total) + ctx.total) % ctx.total; // 0..total-1
-      ctx.index = targetReal;
-
-      // 表示位置（クローンを含むトラック上の実インデックス）= real+1
-      const trackIndex = targetReal + 1;
-      ctx.moving = true;
-      ctx.track.style.transition = 'transform 400ms ease';
-      ctx.track.style.transform = `translateX(-${trackIndex * 100}%)`;
-      setActiveSlideState(leftRoot, ctx.index, ctx.total);
-    },
-  };
-
-  // 初期位置：クローン分 1枚分左へ（= 最初の実スライド）
-  if (slides.length >= 1) {
-    ctx.track.style.transform = 'translateX(-100%)';
-    setActiveSlideState(leftRoot, ctx.index, ctx.total);
+  function applyTransform(withTransition = true) {
+    track.style.transition = withTransition ? 'transform 400ms ease' : 'none';
+    track.style.transform = `translateX(-${virtualIndex * unit}%)`;
   }
 
-  // 無限ループ調整（transitionendでクローン越えを即座に巻き戻し）
-  ctx.track.addEventListener('transitionend', () => {
-    if (!ctx.moving || ctx.total === 0) return;
-    ctx.moving = false;
+  function goto(nextVirtualIndex) {
+    virtualIndex = nextVirtualIndex;
+    applyTransform(true);
+    setActiveByVirtualIndex();
+  }
 
-    const matrices = getComputedStyle(ctx.track).transform;
-    // 現在の可視スライドを推定（% ベースなので index で判断）
-    // クローン端の時に巻き戻し
-    // 左端（先頭クローン表示中）に来た場合
-    const atHeadClone = ctx.index === ctx.total - 1 && headClone && isVisible(headClone);
-    // 右端（末尾クローン表示中）に来た場合
-    const atTailClone = ctx.index === 0 && tailClone && isVisible(tailClone);
+  function step(dir = 1) {
+    goto(virtualIndex + dir);
+  }
 
-    if (atHeadClone) {
-      // 本当の最後の実スライド位置へジャンプ（transition無効）
-      ctx.track.style.transition = 'none';
-      ctx.track.style.transform = `translateX(-${ctx.total * 100}%)`;
-      // 強制再描画
-      void ctx.track.offsetHeight; // eslint-disable-line no-unused-expressions
-      ctx.track.style.transition = 'transform 400ms ease';
-    } else if (atTailClone) {
-      ctx.track.style.transition = 'none';
-      ctx.track.style.transform = 'translateX(-100%)';
-      void ctx.track.offsetHeight;
-      ctx.track.style.transition = 'transform 400ms ease';
+  // 初期位置へ
+  applyTransform(false);
+  setActiveByVirtualIndex();
+
+  // 端での巻き戻し（瞬時ジャンプ）
+  track.addEventListener('transitionend', () => {
+    const realTotal = slides.length;
+    const totalWithClones = realTotal + cloneCount * 2;
+    // 右端側（末尾クローン群）へ到達したら先頭へ巻き戻し
+    if (virtualIndex >= realTotal + cloneCount) {
+      virtualIndex -= realTotal;
+      applyTransform(false);
+      setActiveByVirtualIndex();
+    }
+    // 左端側（先頭クローン群）へ到達したら末尾へ巻き戻し
+    if (virtualIndex < cloneCount) {
+      virtualIndex += realTotal;
+      applyTransform(false);
+      setActiveByVirtualIndex();
     }
   });
 
-  // 自動再生（3秒）
-  if (slides.length >= 2) {
-    startAutoplay(ctx, 3000);
-  }
+  // 7) オートプレイ（3秒）
+  function stop() { if (timer) clearInterval(timer); timer = null; }
+  function play() { stop(); if (slides.length > perView - 1) timer = setInterval(() => step(1), 3000); }
+  leftRoot.addEventListener('mouseenter', stop);
+  leftRoot.addEventListener('focusin', stop);
+  leftRoot.addEventListener('mouseleave', play);
+  leftRoot.addEventListener('focusout', play);
+  play();
 
-  /* ==== 幅・高さの同期 ==== */
+  /* ===== 幅・高さの同期 ===== */
   const imagelink = findImagelinkNear(block);
 
   const applyWidths = () => {
-    // imagelink から幅を拾う（無ければ親幅から比率計算）
     let { left, right } = measureColumnsFromImagelink(imagelink);
     const wrapW = block.getBoundingClientRect().width || window.innerWidth;
 
     if (!left && !right) {
+      // フォールバック: 65% / 35%
       left = Math.round(wrapW * 0.65);
       right = Math.round(wrapW * 0.35);
     } else if (!left && right) {
@@ -279,40 +254,35 @@ export default function decorate(block) {
 
   const applyHeight = () => {
     const img = currentVisibleImg(leftRoot);
-    const h = Math.round((img?.getBoundingClientRect().height) || viewport.getBoundingClientRect().height || 0);
+    const h = Math.round(
+      (img?.getBoundingClientRect().height) ||
+      viewport.getBoundingClientRect().height || 0
+    );
     if (h > 0) block.style.setProperty('--cm-height', `${h}px`);
   };
 
-  // 初回適用
+  // 初期適用
   applyWidths();
-  // viewport の高さは画像読み込み後で決まるので、load/resize/observerで追従
   applyHeight();
 
-  // ResizeObserver で imagelink/左ビュー/画像を監視
-  const roTargets = [imagelink, leftRoot, viewport].filter(Boolean);
+  // 監視: リサイズ・画像ロード・DOM変更（スライド切替時の画像入替にも追従）
   const ro = new ResizeObserver(() => {
     applyWidths();
     applyHeight();
   });
-  roTargets.forEach((t) => ro.observe(t));
+  [imagelink, leftRoot, viewport].filter(Boolean).forEach((t) => ro.observe(t));
 
-  // imagelink 内の左右カラムが別要素であればそれぞれも監視（精度UP）
   if (imagelink) {
     const leftCol = imagelink.querySelector(':scope > div:first-child');
-    const rightAny = imagelink.querySelector(':scope > div:last-child');
+    const rightCol = imagelink.querySelector(':scope > div:last-child');
     if (leftCol) ro.observe(leftCol);
-    if (rightAny) ro.observe(rightAny);
+    if (rightCol) ro.observe(rightCol);
   }
 
-  // 画像ロード後に高さを反映
-  const imgNow = currentVisibleImg(leftRoot);
-  if (imgNow && !imgNow.complete) {
-    imgNow.addEventListener('load', applyHeight, { once: true });
-  }
+  // 画像ロード時にも高さ反映
   qa('img', viewport).forEach((im) => {
     if (!im.complete) im.addEventListener('load', applyHeight, { once: true });
   });
-
   window.addEventListener('resize', () => {
     applyWidths();
     applyHeight();

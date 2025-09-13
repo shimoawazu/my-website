@@ -1,20 +1,21 @@
-/* ===== carouselmini (left: slider, right: 2 image links) =====
-   - 左: 最後の2枚を除いたスライドのみでカルーセル
+/* ===== carouselmini (3-up slider + right 2 image links) =====
+   - 左: スライダー（最後の2枚を除いた画像）… 3枚同時表示
    - 右: 最後の2枚を縦に2分割で表示（画像リンク）
    - 幅:   --cm-left-w  = imagelink 左の大きい画像の実幅（JSが注入）
-           --cm-right-w = imagelink 右の小さい画像列の実幅（JSが注入）
-   - 高さ: --cm-height = 左の表示中スライド画像の実高さ（JSが注入）
+           --cm-right-w = imagelink 右の小さい画像の実幅（JSが注入, 右端揃え）
+   - 高さ: --cm-height = 左で「実際に見えている画像の高さ」（JSが注入）
 */
 
 .carouselmini {
   --cm-gap: 12px;
   --cm-radius: 12px;
-  --cm-left-w: 640px;      /* フォールバック（JSが上書き） */
-  --cm-right-w: 360px;     /* フォールバック（JSが上書き） */
-  --cm-height: auto;       /* JSが実高さ注入 */
+  --cm-left-w: 640px;     /* フォールバック（JSが上書き） */
+  --cm-right-w: 360px;    /* フォールバック（JSが上書き） */
+  --cm-height: auto;      /* JSが実高さ注入 */
+  --cm-per-view: 3;       /* ★ 3枚同時表示 */
 }
 
-/* 横並び用の内部ラッパー（JSが生成） */
+/* 横並びの内側ラッパー（JSが生成） */
 .carouselmini .carouselmini-pair {
   display: flex;
   align-items: flex-start;
@@ -22,7 +23,7 @@
   width: 100%;
 }
 
-/* 左列: カルーセル領域（幅は imagelink 左列に同期） */
+/* 左列：カルーセル本体 */
 .carouselmini .carouselmini-left {
   flex: 0 0 var(--cm-left-w);
   width: var(--cm-left-w);
@@ -30,7 +31,7 @@
   min-width: 0;
 }
 
-/* ビューポート（高さは自動。右列はこの実高さに同期） */
+/* ビューポートとトラック */
 .carouselmini .carouselmini-viewport {
   position: relative;
   overflow: hidden;
@@ -40,7 +41,6 @@
   box-shadow: 0 2px 8px rgba(0 0 0 / 6%);
 }
 
-/* トラック：横方向にスライド */
 .carouselmini .carouselmini-track {
   display: flex;
   height: 100%;
@@ -48,9 +48,9 @@
   transition: transform 400ms ease;
 }
 
-/* スライド：幅100%（左列幅に追従） */
+/* スライド：1枚の幅 = 100% / 3 */
 .carouselmini .carouselmini-slide {
-  flex: 0 0 100%;
+  flex: 0 0 calc(100% / var(--cm-per-view));
   height: 100%;
   display: flex;
   align-items: center;
@@ -65,10 +65,10 @@
 }
 
 .carouselmini .carouselmini-slide img {
-  object-fit: cover; /* 画面いっぱいに見せる */
+  object-fit: cover;
 }
 
-/* インジケーター */
+/* インジケーター（ページングでも可、ここでは実スライド基準） */
 .carouselmini .carouselmini-indicators {
   display: flex;
   justify-content: center;
@@ -93,7 +93,7 @@
   background: #111;
 }
 
-/* 右列：最後の2枚（画像リンク）を縦2分割で表示。高さは左の実高さに同期 */
+/* 右列：最後の2枚（画像リンク）… 幅は imagelink 右、右端に寄せる */
 .carouselmini .carouselmini-right {
   flex: 0 0 var(--cm-right-w);
   width: var(--cm-right-w);
@@ -102,7 +102,8 @@
   display: grid;
   grid-template-rows: 1fr 1fr;
   gap: var(--cm-gap);
-  min-height: 120px; /* 予防 */
+  min-height: 120px;
+  margin-left: auto; /* ★ 右端揃え */
 }
 
 /* 各リンクカード */
@@ -132,34 +133,6 @@
 .carouselmini .carouselmini-link img {
   object-fit: cover;
 }
-
-/* ナビボタン（必要なら表示。デフォ非表示） */
-.carouselmini .carouselmini-nav {
-  display: none;
-  position: absolute;
-  z-index: 2;
-  inset: 0 0 auto 0;
-  height: 0;
-}
-
-.carouselmini .carouselmini-nav .btn {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 0;
-  background: rgba(17 17 17 / 35%);
-  cursor: pointer;
-}
-
-.carouselmini .carouselmini-nav .btn:hover {
-  background: rgba(17 17 17 / 65%);
-}
-
-.carouselmini .carouselmini-nav .prev { left: 8px; }
-.carouselmini .carouselmini-nav .next { right: 8px; }
 
 /* モバイルは縦積み（上：カルーセル／下：リンク2枚） */
 @media (max-width: 899.98px) {
