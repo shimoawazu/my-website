@@ -2,18 +2,21 @@
 .imagelink3 {
   --il3-gap: 16px;                 /* 左右カラムの隙間 */
   --il3-indicator-gap: 8px;
-  --il3-indicator-offset: 2px;     /* 画像下端との距離（小さくして近づける） */
+  --il3-indicator-offset: 6px;     /* ← デスクトップ時のインディケーター位置（近づける） */
   --il3-visible: 3;                /* デスクトップは3枚見せ */
 }
 
 /* SPは1枚見せに切り替え */
 @media (max-width: 900px) {
-  .imagelink3 { --il3-visible: 1; }
+  .imagelink3 {
+    --il3-visible: 1;
+    --il3-indicator-offset: 3px;   /* SPはさらに密着 */
+  }
 }
 
 .imagelink3 .il3-row {
   display: flex;
-  align-items: stretch;
+  align-items: flex-start;          /* ← 重要：stretch をやめてカルーセル列を伸ばさない */
   gap: var(--il3-gap);
   width: 100%;
   box-sizing: border-box;
@@ -23,11 +26,11 @@
 .imagelink3 .il3-carousel {
   flex: 0 0 70%;
   max-width: 70%;
+  position: relative;               /* ← インディケーターの絶対配置先 */
   display: flex;
   flex-direction: column;
-  gap: 0;                          /* ← インディケーターとの“段差”をなくす */
+  gap: 0;                           /* ← 画像とインディケーター間の余白ゼロ */
   min-width: 0;
-  position: relative;              /* ← インディケーターを重ねるための基準 */
 }
 
 /* ビューポート（ここでトリミング） */
@@ -35,14 +38,14 @@
   position: relative;
   overflow: hidden;
   width: 100%;
-  aspect-ratio: 16 / 9;            /* 初期フォールバック。JSで上書き可 */
+  aspect-ratio: 16 / 9;             /* 初期フォールバック。JSで上書き可 */
   min-height: 240px;
 }
 
 /* 横並びのトラック。隙間はゼロにして“4枚目のチラ見え”を防ぐ */
 .imagelink3 .il3-track {
   display: flex;
-  gap: 0;                          /* 余白があるとオフセット計算がズレる */
+  gap: 0;                           /* ← ギャップがあるとオフセット計算がズレる */
   align-items: stretch;
   will-change: transform;
   transform: translateX(0);
@@ -67,21 +70,21 @@
   object-fit: cover;
 }
 
-/* インディケーター：画像の上に“重ねる”配置に変更（近づける） */
+/* インディケーター（画像に密着させて重ね表示） */
 .imagelink3 .il3-indicators {
   position: absolute;
   left: 50%;
-  bottom: var(--il3-indicator-offset);  /* ここを2px〜8pxで微調整 */
+  bottom: var(--il3-indicator-offset); /* ← ここで距離を調整 */
   transform: translateX(-50%);
   z-index: 2;
+
   display: flex;
   justify-content: center;
   gap: var(--il3-indicator-gap);
   list-style: none;
   margin: 0;
-  padding: 0;                      /* ← 余白ゼロで密着 */
-  pointer-events: auto;
-  background: transparent;
+  padding: 0;
+  line-height: 0;
 }
 
 .imagelink3 .il3-indicators button {
@@ -91,7 +94,6 @@
   border-radius: 50%;
   background: #ccc;
   border: 0;
-  cursor: pointer;
 }
 
 .imagelink3 .il3-indicators button[aria-current="true"] {
@@ -141,9 +143,5 @@
   }
   .imagelink3 .il3-side img {
     height: auto !important;
-  }
-  /* SP時も画像に密着 */
-  .imagelink3 .il3-indicators {
-    bottom: 3px;
   }
 }
