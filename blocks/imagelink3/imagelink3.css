@@ -1,7 +1,13 @@
-/* ========== imagelink3 (70/30 layout, safe fallbacks) ========== */
+/* ===== imagelink3: 70/30 レイアウト。カルーセルは常に「ちょうど3枚」表示（SPは1枚） ===== */
 .imagelink3 {
-  --il3-gap: 16px;
+  --il3-gap: 16px;                 /* 左右カラムの隙間 */
   --il3-indicator-gap: 8px;
+  --il3-visible: 3;                /* デスクトップは3枚見せ */
+}
+
+/* SPは1枚見せに切り替え（JSでも同期して制御するが、CSS側でもフォールバック） */
+@media (max-width: 900px) {
+  .imagelink3 { --il3-visible: 1; }
 }
 
 .imagelink3 .il3-row {
@@ -22,24 +28,27 @@
   min-width: 0;
 }
 
+/* ビューポート（ここでトリミング） */
 .imagelink3 .il3-viewport {
   position: relative;
   overflow: hidden;
   width: 100%;
-  /* ▼ フォールバック（JS前でも見えるように） */
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 16 / 9; /* 初期フォールバック。JSで上書き */
   min-height: 240px;
 }
 
+/* 横並びのトラック。隙間はゼロにして“4枚目のチラ見え”を防ぐ */
 .imagelink3 .il3-track {
   display: flex;
+  gap: 0;               /* ← 重要：ギャップがあるとオフセット計算がズレる */
   align-items: stretch;
   will-change: transform;
   transform: translateX(0);
 }
 
+/* スライドカードは「可視枚数」で幅を分割（サブピクセルOK） */
 .imagelink3 .il3-card {
-  flex: 0 0 auto; /* 幅は JS で設定 */
+  flex: 0 0 calc(100% / var(--il3-visible));
   height: 100%;
   box-sizing: border-box;
 }
@@ -91,7 +100,7 @@
 
 .imagelink3 .il3-side-item {
   width: 100%;
-  /* 高さは JS が設定（カルーセル高さ/2 - gap） */
+  /* 高さはJSでカルーセル高さに合わせて2分割 */
 }
 
 .imagelink3 .il3-side a,
@@ -106,7 +115,7 @@
   object-fit: cover;
 }
 
-/* モバイル：縦積み（カルーセルはJSで1枚表示） */
+/* モバイル：縦積み。カルーセルは1枚見せ */
 @media (max-width: 900px) {
   .imagelink3 .il3-row {
     flex-direction: column;
