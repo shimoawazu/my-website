@@ -1,0 +1,44 @@
+/* Base grid */
+.cards4 > ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(257px, 1fr));
+  gap: 24px;
+  grid-auto-flow: dense; /* allow spanning item to pack nicely */
+}
+
+/* Card frame */
+.cards4 > ul > li {
+  border: 1px solid #dadada;
+  background-color: var(--background-color);
+}
+
+/* 3rd card doubles width on roomy layouts */
+.cards4 > ul > li:nth-child(3) {
+  grid-column: span 2;
+}
+
+/* Content areas */
+.cards4 .cards-card-body {
+  margin: 16px;
+}
+
+.cards4 .cards-card-image {
+  line-height: 0;
+}
+
+/* Media */
+.cards4 > ul > li img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+/* Narrow screens: fallback to normal width */
+@media (max-width: 560px) {
+  .cards4 > ul > li:nth-child(3) {
+    grid-column: span 1;
+  }
+}
