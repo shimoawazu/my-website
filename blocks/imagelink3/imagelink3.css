@@ -1,22 +1,12 @@
-/* ===== imagelink3: 70/30 レイアウト。カルーセルは常に「ちょうど3枚」表示（SPは1枚） ===== */
+/* ========== imagelink3 (70/30 layout) ========== */
 .imagelink3 {
-  --il3-gap: 16px;                 /* 左右カラムの隙間 */
+  --il3-gap: 16px;         /* カラム間/縦並びの隙間 */
   --il3-indicator-gap: 8px;
-  --il3-indicator-offset: 6px;     /* ← デスクトップ時のインディケーター位置（近づける） */
-  --il3-visible: 3;                /* デスクトップは3枚見せ */
-}
-
-/* SPは1枚見せに切り替え */
-@media (max-width: 900px) {
-  .imagelink3 {
-    --il3-visible: 1;
-    --il3-indicator-offset: 3px;   /* SPはさらに密着 */
-  }
 }
 
 .imagelink3 .il3-row {
   display: flex;
-  align-items: flex-start;          /* ← 重要：stretch をやめてカルーセル列を伸ばさない */
+  align-items: stretch;
   gap: var(--il3-gap);
   width: 100%;
   box-sizing: border-box;
@@ -26,38 +16,30 @@
 .imagelink3 .il3-carousel {
   flex: 0 0 70%;
   max-width: 70%;
-  position: relative;               /* ← インディケーターの絶対配置先 */
   display: flex;
   flex-direction: column;
-  gap: 0;                           /* ← 画像とインディケーター間の余白ゼロ */
+  gap: 8px;
   min-width: 0;
 }
 
-/* ビューポート（ここでトリミング） */
 .imagelink3 .il3-viewport {
   position: relative;
   overflow: hidden;
   width: 100%;
-  aspect-ratio: 16 / 9;             /* 初期フォールバック。JSで上書き可 */
-  min-height: 240px;
+  /* 高さは JS が設定 */
 }
 
-/* 横並びのトラック。隙間はゼロにして“4枚目のチラ見え”を防ぐ */
 .imagelink3 .il3-track {
   display: flex;
-  gap: 0;                           /* ← ギャップがあるとオフセット計算がズレる */
-  align-items: stretch;
   will-change: transform;
   transform: translateX(0);
 }
 
-/* スライドカードは「可視枚数」で幅を分割（サブピクセルOK） */
 .imagelink3 .il3-card {
-  flex: 0 0 calc(100% / var(--il3-visible));
+  flex: 0 0 auto; /* 幅は JS で設定（= 左カラム幅 / 可視枚数） */
   height: 100%;
   box-sizing: border-box;
 }
-
 .imagelink3 .il3-card a,
 .imagelink3 .il3-card picture,
 .imagelink3 .il3-card img {
@@ -65,28 +47,17 @@
   width: 100%;
   height: 100%;
 }
+.imagelink3 .il3-card img { object-fit: cover; }
 
-.imagelink3 .il3-card img {
-  object-fit: cover;
-}
-
-/* インディケーター（画像に密着させて重ね表示） */
+/* インジケーター */
 .imagelink3 .il3-indicators {
-  position: absolute;
-  left: 50%;
-  bottom: var(--il3-indicator-offset); /* ← ここで距離を調整 */
-  transform: translateX(-50%);
-  z-index: 2;
-
   display: flex;
   justify-content: center;
   gap: var(--il3-indicator-gap);
   list-style: none;
   margin: 0;
-  padding: 0;
-  line-height: 0;
+  padding: 6px 0 0;
 }
-
 .imagelink3 .il3-indicators button {
   width: 10px;
   height: 10px;
@@ -95,10 +66,7 @@
   background: #ccc;
   border: 0;
 }
-
-.imagelink3 .il3-indicators button[aria-current="true"] {
-  background: #333;
-}
+.imagelink3 .il3-indicators button[aria-current="true"] { background: #333; }
 
 /* 右：縦2リンク（30%） */
 .imagelink3 .il3-side {
@@ -109,12 +77,10 @@
   gap: var(--il3-gap);
   min-width: 0;
 }
-
 .imagelink3 .il3-side-item {
   width: 100%;
-  /* 高さはJSでカルーセル高さに合わせて2分割 */
+  /* 高さは JS が設定（カルーセルの高さを2分割） */
 }
-
 .imagelink3 .il3-side a,
 .imagelink3 .il3-side picture,
 .imagelink3 .il3-side img {
@@ -122,12 +88,9 @@
   width: 100%;
   height: 100%;
 }
+.imagelink3 .il3-side img { object-fit: cover; }
 
-.imagelink3 .il3-side img {
-  object-fit: cover;
-}
-
-/* モバイル：縦積み。カルーセルは1枚見せ */
+/* モバイル：縦積み（カルーセルは1枚表示にJSで変更） */
 @media (max-width: 900px) {
   .imagelink3 .il3-row {
     flex-direction: column;
@@ -138,6 +101,7 @@
     max-width: 100%;
     width: 100%;
   }
+  /* 縦積み時は右2枚の高さは自動（はみ出し防止） */
   .imagelink3 .il3-side-item {
     height: auto !important;
   }
