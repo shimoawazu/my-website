@@ -1,22 +1,23 @@
-/* 横並び用ラッパー（JSで生成） */
+/* 並び用ラッパー：carouselmini（左）＋ imagelink2（右） */
 .cm-row {
   display: flex;
   flex-wrap: nowrap;
   align-items: flex-start;
-  column-gap: var(--il2-gap, 16px);
+  gap: var(--il2-gap, 16px);
+  /* imagelink と左右位置を揃えるため、JSで max-width を合わせつつ中央寄せ */
   margin-left: auto;
-  margin-right: auto; /* imagelink と左右位置を揃えるため中央寄せ */
-  max-width: 100%;
+  margin-right: auto;
 }
 
-/* ラッパー直下の2ブロックは“幅: auto”で横並び。
-   グローバルの width:100% を打ち消すために !important で確実に上書き */
-.cm-row > .carouselmini,
+/* 左：carouselmini は測定した幅で固定表示（JSで width をセット） */
+.cm-row > .carouselmini {
+  flex: 0 0 auto;
+}
+
+/* 右：imagelink2 は“サイズそのまま”で右端に寄せる */
 .cm-row > .imagelink2 {
   flex: 0 0 auto;
-  width: auto !important;
-  max-width: none !important;
-  overflow: hidden;
+  margin-left: auto; /* 右端寄せ */
 }
 
 /* imagelink2 の中身（縦に2枚） */
@@ -26,7 +27,7 @@
   gap: var(--il2-gap, 16px);
 }
 
-/* 中の picture/img は親幅にフィット */
+/* 画像系のリセット（サイズは従来どおり/JSで触らない） */
 .imagelink2 a,
 .imagelink2 picture,
 .imagelink2 img {
@@ -35,12 +36,15 @@
 }
 .imagelink2 img {
   height: auto;
-  object-fit: cover;
+  object-fit: cover; /* 既存の見え方を崩さない */
 }
 
-/* モバイルは縦積み（必要なら閾値は調整） */
-@media (max-width: 900px) {
+/* モバイルは縦積み（必要に応じて調整） */
+@media (width < 900px) {
   .cm-row {
     flex-direction: column;
+  }
+  .cm-row > .imagelink2 {
+    margin-left: 0; /* 右寄せ解除 */
   }
 }
