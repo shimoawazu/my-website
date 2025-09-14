@@ -1,144 +1,153 @@
 /**
- * imagelink2
- * - carouselmini と imagelink2 を横並び（.cm-inline-row）にする
- * - 近傍の .imagelink から右カラム幅を実測し、imagelink2 幅を強制一致
- * - ResizeObserver と画像 load 後にも追従
+ * .carouselmini と .imagelink2 を同じ親の中で横並びにする。
+ * - 2つだけを <div class="mini-pair-row"> に包む（他の兄弟には影響しない）
+ * - 幅は上段 .imagelink の左右カラムの実測値に合わせてインライン指定
+ * - 右の2バナーの合計高さを左カルーセル画像の高さに合わせ、各バナーは半分ずつにする
  */
 
-function $(sel, root = document) { return root.querySelector(sel); }
-function $all(sel, root = document) { return [...root.querySelectorAll(sel)]; }
+function qsa(el, sel) { return Array.from(el.querySelectorAll(sel)); }
+function one(el, sel) { return el.querySelector(sel); }
 
-function findSibling(root, cls, preferPrev = true) {
-  let n = preferPrev ? root.previousElementSibling : root.nextElementSibling;
-  while (n) {
-    if (n.classList && n.classList.contains(cls)) return n;
-    n = preferPrev ? n.previousElementSibling : n.nextElementSibling;
-  }
-  return null;
+function onceImagesLoaded(root, cb) {
+  const imgs = qsa(root, 'img');
+  let pending = imgs.filter((i) => !i.complete).length;
+  if (pending === 0) return cb();
+  const done = () => { if (--pending <= 0) cb(); };
+  imgs.forEach((img) => {
+    if (!img.complete) {
+      img.addEventListener('load', done, { once: true });
+      img.addEventListener('error', done, { once: true });
+    }
+  });
 }
 
-function findNearestInContainer(block, cls) {
-  // 同じ親 <div> 内で前優先→後を検索
-  return findSibling(block, cls, true) || findSibling(block, cls, false);
-}
-
-function findNearestImagelink(block) {
-  // 同じ親から探し、見つからなければ最寄り上位→全体へ
-  const local = findNearestInContainer(block, 'imagelink');
-  if (local) return local;
-
-  let p = block.parentElement;
-  while (p) {
-    const c = p.querySelector(':scope > .imagelink');
-    if (c) return c;
-    p = p.parentElement;
+function makeRow(parent, leftBlock, rightBlock) {
+  // すでに包まれていれば使い回し
+  if (leftBlock.parentElement.classList.contains('mini-pair-row')) {
+    const row = leftBlock.parentElement;
+    if (rightBlock.parentElement !== row) row.appendChild(rightBlock);
+    return row;
   }
-  return $('.imagelink');
-}
-
-function measureImagelinkCols(imagelink) {
-  if (!imagelink) return { left: 0, right: 0, total: 0, gap: 16 };
-  const styles = getComputedStyle(imagelink);
-  const gap = parseFloat(styles.columnGap || styles.gap) || 16;
-
-  const total = Math.round(imagelink.getBoundingClientRect().width || 0);
-  const leftEl  = imagelink.querySelector(':scope > div:first-child');
-  const rightEl = imagelink.querySelector(':scope > div:nth-child(2)');
-
-  const left  = Math.round(leftEl ?.getBoundingClientRect().width  || 0);
-  let   right = Math.round(rightEl?.getBoundingClientRect().width || 0);
-
-  if (!right && total && left) {
-    right = Math.max(0, total - left - gap);
-  }
-  return { left, right, total, gap };
-}
-
-function ensureInlineRow(carouselmini, imagelink2) {
-  if (!carouselmini || !imagelink2) return null;
-
-  // 既にラップ済みならそれを返す
-  if (carouselmini.parentElement === imagelink2.parentElement &&
-      carouselmini.parentElement.classList?.contains('cm-inline-row')) {
-    return carouselmini.parentElement;
-  }
-
-  // 2つを包むラッパを作成（先に来る方の位置に挿入）
   const row = document.createElement('div');
-  row.className = 'cm-inline-row';
-
-  const container = carouselmini.parentElement;
-  const first = (carouselmini.compareDocumentPosition(imagelink2) & Node.DOCUMENT_POSITION_FOLLOWING)
-    ? carouselmini : imagelink2;
-
-  container.insertBefore(row, first);
-  row.appendChild(carouselmini);
-  row.appendChild(imagelink2);
-
+  row.className = 'mini-pair-row';
+  // インラインで横並びを強制（テーマのCSSより優先される）
+  Object.assign(row.style, {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '16px',
+    marginLeft: 'auto',
+    marginRight: 'auto',
+  });
+  parent.insertBefore(row, leftBlock);
+  row.appendChild(leftBlock);
+  row.appendChild(rightBlock);
   return row;
 }
 
-function applyWidths(row, imagelink, imagelink2) {
-  const { left, right, gap } = measureImagelinkCols(imagelink);
-  const leftW  = left  || 640;
-  const rightW = right || 320;
+function measureWidths(parent, row) {
+  // 上段の .imagelink から「全体幅」と「右カラム幅」を推定
+  const imagelink = one(parent, ':scope > .imagelink');
+  const ilRect = imagelink?.getBoundingClientRect();
+  const totalW = Math.round(ilRect?.width || row.getBoundingClientRect().width || parent.clientWidth || 1200);
 
-  // CSS 変数に反映（行全体）
-  row.style.setProperty('--cm-gap', `${Math.round(gap)}px`);
-  row.style.setProperty('--cm-left-w',  `${leftW}px`);
-  row.style.setProperty('--cm-right-w', `${rightW}px`);
+  // 右カラムは .imagelink の2番目の子をサンプル（なければ最後の子）
+  const rightProbe = imagelink?.querySelector(':scope > div:nth-child(2)') || imagelink?.querySelector(':scope > div:last-child');
+  let rightW = Math.round(rightProbe?.getBoundingClientRect().width || totalW * 0.33);
 
-  // 念のため imagelink2 にも inline 指定で強制（ブロック全幅化の保険）
-  Object.assign(imagelink2.style, {
-    width:    `${rightW}px`,
+  // 変な値の保険
+  if (rightW >= totalW) rightW = Math.floor(totalW / 3);
+  const gap = 16;
+  const leftW = Math.max(200, totalW - rightW - gap);
+  return { totalW, leftW, rightW, gap };
+}
+
+function applyLayout(row, carousel, il2, dims) {
+  const { totalW, leftW, rightW } = dims;
+
+  // 行の幅を上段 .imagelink と揃える
+  Object.assign(row.style, {
+    width: `${totalW}px`,
+    maxWidth: `${totalW}px`,
+  });
+
+  // 子ブロックの幅をインラインで確定（100%化を防ぐ）
+  Object.assign(carousel.style, {
+    flex: '0 0 auto',
+    width: `${leftW}px`,
+    maxWidth: `${leftW}px`,
+    boxSizing: 'border-box',
+    display: 'block',
+  });
+  Object.assign(il2.style, {
+    flex: '0 0 auto',
+    width: `${rightW}px`,
     maxWidth: `${rightW}px`,
-    flex:     `0 0 ${rightW}px`,
+    boxSizing: 'border-box',
+    display: 'block',
   });
 }
 
-export default async function decorate(block) {
-  // 画像のパフォーマンスヒント
-  $all('img', block).forEach((img) => {
-    if (!img.getAttribute('loading'))  img.setAttribute('loading',  'lazy');
-    if (!img.getAttribute('decoding')) img.setAttribute('decoding', 'async');
-  });
+function syncHeights(carousel, il2) {
+  // 左のカルーセルの表示中画像の高さを取得
+  const carImg = one(carousel, 'img');
+  if (!carImg) return;
+  const ch = Math.round(carImg.getBoundingClientRect().height);
+  if (!ch) return;
 
-  // 近傍の carouselmini を取得（同じセクションの前優先）
-  let cm = findNearestInContainer(block, 'carouselmini') ||
-           findNearestInContainer(block, 'carousel'); // 念のため
+  const gap = 16;
+  const each = Math.max(1, Math.floor((ch - gap) / 2));
 
-  // DOM レンダリング待ち（他ブロックの decorate 後）を最大 2 秒までポーリング
-  const start = performance.now();
-  function waitForCM() {
-    if (!cm) cm = findNearestInContainer(block, 'carouselmini') || findNearestInContainer(block, 'carousel');
-    if (!cm && performance.now() - start < 2000) {
-      requestAnimationFrame(waitForCM);
-      return;
+  // 右2枚を半々に
+  const imgs = qsa(il2, 'img');
+  imgs.forEach((img) => {
+    img.style.width = '100%';
+    img.style.height = `${each}px`;
+    img.style.objectFit = 'cover';
+    const pic = img.closest('picture');
+    if (pic) {
+      pic.style.display = 'block';
+      pic.style.height = `${each}px`;
+      pic.style.width = '100%';
     }
-    bootstrap();
-  }
+  });
+}
 
-  function bootstrap() {
-    // 横並びラップ
-    const row = ensureInlineRow(cm, block) || block.parentElement;
-    const il = findNearestImagelink(row);
+function debounce(fn, ms = 150) {
+  let t = null;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), ms);
+  };
+}
 
-    // 初期幅反映
-    applyWidths(row, il, block);
+export default function decorate(block) {
+  // imagelink2 自身
+  const il2 = block;
+  const parent = il2.parentElement;
+  if (!parent) return;
 
-    // 画像ロードやリサイズでも再計測
-    const update = () => applyWidths(row, il, block);
+  // 同階層の .carouselmini を必須とする
+  const carousel = one(parent, ':scope > .carouselmini');
+  if (!carousel) return;
 
-    const ro = new ResizeObserver(update);
-    [row, il].filter(Boolean).forEach((t) => ro.observe(t));
+  // 2つだけを横並びに包む
+  const row = makeRow(parent, carousel, il2);
 
-    window.addEventListener('resize', update);
-    $all('img', il || document).forEach((im) => {
-      if (im.complete) return;
-      im.addEventListener('load', update, { once: true });
-      im.addEventListener('error', update, { once: true });
-    });
-  }
+  const recalc = () => {
+    const dims = measureWidths(parent, row);
+    applyLayout(row, carousel, il2, dims);
+    syncHeights(carousel, il2);
+  };
 
-  waitForCM();
+  // 画像ロード後に厳密計測
+  let waitTargets = [parent, carousel, il2].filter(Boolean);
+  let pending = waitTargets.length;
+  const done = () => { if (--pending === 0) recalc(); };
+  waitTargets.forEach((t) => onceImagesLoaded(t, done));
+
+  // 即時一回（すぐ取れる寸法があれば先に適用）
+  recalc();
+
+  // リサイズ時追随
+  window.addEventListener('resize', debounce(recalc, 150), { passive: true });
 }

@@ -1,67 +1,26 @@
-/* ===== imagelink2：carouselmini の右横に固定配置（幅は imagelink 右カラムに一致） ===== */
+/* ───────────────── imagelink2 の中身（2枚縦並び）の基本だけ定義。横並びレイアウトはJSがインラインで制御 ───────────────── */
 
-.cm-inline-row {
-  --cm-gap: 16px;      /* carouselmini と imagelink2 の間隔 */
-  --cm-left-w: 640px;  /* 左（carouselmini）幅：JSで上書き */
-  --cm-right-w: 320px; /* 右（imagelink2）幅：JSで上書き */
-
-  display: flex;
-  align-items: stretch;
-  gap: var(--cm-gap);
-  width: 100%;
-}
-
-/* 左：carouselmini は imagelink 左カラム幅に固定 */
-.cm-inline-row > .carouselmini {
-  flex: 0 0 var(--cm-left-w);
-  max-width: var(--cm-left-w);
-  min-width: 0;
-  margin: 0 !important;
-}
-
-/* 右：imagelink2 は imagelink 右カラム幅に固定 */
-.cm-inline-row > .imagelink2 {
-  flex: 0 0 var(--cm-right-w);
-  max-width: var(--cm-right-w);
-  min-width: 0;
-  margin: 0 !important;
-}
-
-/* imagelink2 の中身（縦2枚） */
-.imagelink2 {
-  --i2-gap: 8px;
+.mini-pair-row > .imagelink2 {
   display: flex;
   flex-direction: column;
-  gap: var(--i2-gap);
-  box-sizing: border-box;
-
-  /* フォールバック：JS が失敗しても全幅化しない */
-  width: var(--cm-right-w, auto);
-  max-width: var(--cm-right-w, 100%);
+  gap: 16px; /* 左カルーセルとの見た目を合わせる */
 }
 
 .imagelink2 a,
-.imagelink2 picture {
+.imagelink2 picture,
+.imagelink2 img {
   display: block;
   width: 100%;
 }
 
 .imagelink2 img {
-  display: block;
-  width: 100%;
-  height: auto;
-  object-fit: cover;
-  border-radius: 8px;
+  height: auto;      /* 初期値。JSで高さを同期すると上書きされます */
+  object-fit: cover; /* 高さ同期時のトリミング用 */
 }
 
-/* 狭幅では縦積みにフォールバック */
-@media (max-width: 899.98px) {
-  .cm-inline-row {
-    flex-direction: column;
-  }
-  .cm-inline-row > .carouselmini,
-  .cm-inline-row > .imagelink2 {
-    flex: 0 0 auto;
-    max-width: 100%;
+/* モバイルは縦積みにフォールバック（必要に応じて閾値調整） */
+@media (max-width: 900px) {
+  .mini-pair-row {
+    display: block !important;
   }
 }
