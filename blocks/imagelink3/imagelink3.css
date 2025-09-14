@@ -1,166 +1,240 @@
-/* ===== imagelink3: 70/30 レイアウト。カルーセルは常に「ちょうど3枚」表示（SPは1枚） ===== */
+/* ===========================
+   imagelink3.css  (full)
+   - 左：カルーセル / 右：2枚リンク
+   - PC: 左70% / 右30%
+   - モバイル: カルーセル1枚表示、2枚リンクは下に縦配置
+   - インディケーターは画像下端に重ねて表示
+   =========================== */
+
+/* 変数（必要に応じて調整） */
 .imagelink3 {
-  --il3-gap: 16px;                 /* 左右カラムの隙間 */
-  --il3-indicator-gap: 8px;
-  --il3-visible: 3;                /* デスクトップは3枚見せ */
+  --il3-gap: clamp(8px, 1.5vw, 16px);
+  --il3-left: 70%;
+  --il3-right: 30%;
+  --il3-dot-size: 10px;
+  --il3-dot-gap: 8px;
+  --il3-nav-size: 36px;
+  --il3-nav-bg: rgba(0, 0, 0, 0.35);
+  --il3-nav-bg-hover: rgba(0, 0, 0, 0.6);
+  --il3-aspect: 1040/490;  /* カルーセルの見た目比率（画像が多い 1040x490 に合わせる） */
 }
 
-/* SPは1枚見せに切り替え（JSでも同期して制御するが、CSS側でもフォールバック） */
-@media (max-width: 900px) {
-  .imagelink3 { --il3-visible: 1; }
-}
-
-.imagelink3 .il3-row {
-  display: flex;
-  align-items: stretch;
-  gap: var(--il3-gap);
-  width: 100%;
+/* ベース */
+.imagelink3 * {
   box-sizing: border-box;
 }
 
-/* 左：カルーセル（70%） */
-.imagelink3 .il3-carousel {
-  flex: 0 0 70%;
-  max-width: 70%;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
+.imagelink3 picture,
+.imagelink3 img {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
-/* ビューポート（ここでトリミング） */
+/* ---------------------------
+   レイアウト（カルーセル + サイド2枚）
+   --------------------------- */
+.imagelink3 .il3-inner {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;   /* 同じ高さに揃う（右の2枚も左の高さに合わせる） */
+  gap: var(--il3-gap);
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* 左：カルーセル領域（70%） */
+.imagelink3 .il3-carousel {
+  position: relative;     /* インディケーター/ナビの絶対配置基準 */
+  flex: 0 1 var(--il3-left);
+  max-width: var(--il3-left);
+  overflow: hidden;
+  background: #fff;
+}
+
+/* 高さ安定用：ビューポートにアスペクト比を与える */
 .imagelink3 .il3-viewport {
   position: relative;
-  overflow: hidden;
   width: 100%;
-  aspect-ratio: 16 / 9; /* 初期フォールバック。JSで上書き */
-  min-height: 240px;
+  aspect-ratio: var(--il3-aspect);
+  overflow: hidden;
 }
 
-/* 横並びのトラック。隙間はゼロにして“4枚目のチラ見え”を防ぐ */
+/* スライドトラック：横並び */
 .imagelink3 .il3-track {
   display: flex;
-  gap: 0;               /* ← 重要：ギャップがあるとオフセット計算がズレる */
-  align-items: stretch;
-  will-change: transform;
-  transform: translateX(0);
-}
-
-/* スライドカードは「可視枚数」で幅を分割（サブピクセルOK） */
-.imagelink3 .il3-card {
-  flex: 0 0 calc(100% / var(--il3-visible));
-  height: 100%;
-  box-sizing: border-box;
-}
-
-.imagelink3 .il3-card a,
-.imagelink3 .il3-card picture,
-.imagelink3 .il3-card img {
-  display: block;
+  flex-direction: row;
+  gap: 0;                 /* 余白なしで3枚ピッタリ */
   width: 100%;
   height: 100%;
+  will-change: transform;
+  transition: transform 400ms ease;
 }
 
-.imagelink3 .il3-card img {
-  object-fit: cover;
-}
-
-/* インジケーター */
-.imagelink3 .il3-indicators {
+/* スライド1枚の幅＝カルーセル幅の1/3（3枚表示） */
+.imagelink3 .il3-slide {
+  flex: 0 0 calc(100% / 3);
+  height: 100%;
   display: flex;
+  align-items: center;
   justify-content: center;
-  gap: var(--il3-indicator-gap);
-  list-style: none;
-  margin: 0;
-  padding: 6px 0 0;
 }
 
-.imagelink3 .il3-indicators button {
-  width: 10px;
-  height: 10px;
-  padding: 0;
-  border-radius: 50%;
-  background: #ccc;
-  border: 0;
+/* 画像はトリミング無しで収める（必要なら contain→cover に変更） */
+.imagelink3 .il3-slide picture,
+.imagelink3 .il3-slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
-.imagelink3 .il3-indicators button[aria-current="true"] {
-  background: #333;
-}
-
-/* 右：縦2リンク（30%） */
+/* 右：2枚リンク領域（30%） */
 .imagelink3 .il3-side {
-  flex: 0 0 30%;
-  max-width: 30%;
+  flex: 0 1 var(--il3-right);
+  max-width: var(--il3-right);
   display: flex;
   flex-direction: column;
   gap: var(--il3-gap);
-  min-width: 0;
 }
 
-.imagelink3 .il3-side-item {
-  width: 100%;
-  /* 高さはJSでカルーセル高さに合わせて2分割 */
-}
-
-.imagelink3 .il3-side a,
-.imagelink3 .il3-side picture,
-.imagelink3 .il3-side img {
+/* 2枚を等分（左の高さに追従して縦2分割） */
+.imagelink3 .il3-side-link {
+  flex: 1 1 0;
   display: block;
+  overflow: hidden;
+  position: relative;
+  background: #fff;
+}
+
+/* 右2枚の画像も縦横いっぱいにフィット */
+.imagelink3 .il3-side-link picture,
+.imagelink3 .il3-side-link img {
   width: 100%;
   height: 100%;
+  object-fit: contain;
 }
 
-.imagelink3 .il3-side img {
-  object-fit: cover;
-}
-
-/* モバイル：縦積み。カルーセルは1枚見せ */
-@media (max-width: 900px) {
-  .imagelink3 .il3-row {
-    flex-direction: column;
-  }
-  .imagelink3 .il3-carousel,
-  .imagelink3 .il3-side {
-    flex: 0 0 auto;
-    max-width: 100%;
-    width: 100%;
-  }
-  .imagelink3 .il3-side-item {
-    height: auto !important;
-  }
-  .imagelink3 .il3-side img {
-    height: auto !important;
-  }
-  /* === インディケーターを画像の下端に重ねる（距離ゼロ） === */
-.imagelink3 .il3-carousel {
-  position: relative;
-  gap: 0; /* ビューポートとインディケーターの隙間をなくす */
-}
-
-/* 絶対配置で重ねる。親(.il3-carousel)基準で中央寄せ */
+/* ---------------------------
+   インディケーター（画像の下端に重ねる）
+   --------------------------- */
 .imagelink3 .il3-indicators {
   position: absolute;
   left: 50%;
-  bottom: 8px;              /* 画像との距離。好みに応じて 6〜12px で微調整 */
+  bottom: 6px;                  /* 距離がある場合は 2px/0 に調整 */
   transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  gap: var(--il3-dot-gap);
   margin: 0;
-  padding: 4px 6px;         /* タップしやすさ確保（背景つける場合に備え） */
-  background: transparent;  /* 背景を付けたいなら rgba(0,0,0,.35) などに変更 */
-  border-radius: 9999px;
-  z-index: 2;
+  padding: 0;
 }
 
-/* モバイルは少し余白を詰める */
+.imagelink3 .il3-indicators button {
+  width: var(--il3-dot-size);
+  height: var(--il3-dot-size);
+  border-radius: 50%;
+  border: 0;
+  padding: 0;
+  line-height: 0;
+  background: #d0d0d0;
+  cursor: pointer;
+}
+
+.imagelink3 .il3-indicators button[aria-current="true"],
+.imagelink3 .il3-indicators button:disabled,
+.imagelink3 .il3-indicators button:focus-visible {
+  background: #222;             /* アクティブ／フォーカス色 */
+}
+
+/* ---------------------------
+   ナビゲーション左右ボタン
+   --------------------------- */
+.imagelink3 .il3-nav {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;         /* コンテナはクリック通さない */
+}
+
+.imagelink3 .il3-nav button {
+  pointer-events: auto;         /* ボタンはクリック可能に戻す */
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: var(--il3-nav-size);
+  height: var(--il3-nav-size);
+  border-radius: 50%;
+  border: 0;
+  background: var(--il3-nav-bg);
+  cursor: pointer;
+}
+
+.imagelink3 .il3-nav button:hover,
+.imagelink3 .il3-nav button:focus-visible {
+  background: var(--il3-nav-bg-hover);
+}
+
+.imagelink3 .il3-nav .prev { left: 8px; }
+.imagelink3 .il3-nav .next { right: 8px; }
+
+/* 矢印マーク */
+.imagelink3 .il3-nav button::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #fff;
+  border-bottom: 0;
+  border-left: 0;
+  top: 50%;
+  left: 50%;
+  transform: translate(-60%, -50%) rotate(-135deg);
+}
+
+.imagelink3 .il3-nav .next::after {
+  transform: translate(-40%, -50%) rotate(45deg);
+}
+
+/* ---------------------------
+   レスポンシブ
+   --------------------------- */
+
+/* タブレット以下：ドットを少し近づける */
 @media (max-width: 900px) {
   .imagelink3 .il3-indicators {
-    bottom: 6px;
-    padding: 4px 6px;
+    bottom: 4px;
   }
 }
 
-/* ドットサイズはそのまま。大きくしたいなら下を調整
-.imagelink3 .il3-indicators button { width: 12px; height: 12px; }
-*/
+/* モバイル：カルーセルは1枚表示、2枚リンクは下に縦積み */
+@media (max-width: 768px) {
+  .imagelink3 .il3-inner {
+    flex-direction: column;
+  }
 
+  .imagelink3 .il3-carousel,
+  .imagelink3 .il3-side {
+    max-width: 100%;
+    flex-basis: 100%;
+  }
+
+  /* 1枚表示に切替（JSはそのままでOK。CSSで幅だけ変更） */
+  .imagelink3 .il3-slide {
+    flex: 0 0 100%;
+  }
+
+  .imagelink3 .il3-side {
+    margin-top: var(--il3-gap);
+    gap: var(--il3-gap);
+  }
+
+  /* ドットをさらに近づけたいときはここで 2px などに調整 */
+  .imagelink3 .il3-indicators {
+    bottom: 3px;
+  }
+}
+
+/* （任意）背景を白で統一したい場合 */
+.imagelink3 .il3-carousel,
+.imagelink3 .il3-side-link {
+  background-color: #fff;
 }
