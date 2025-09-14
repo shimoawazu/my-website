@@ -132,4 +132,35 @@
   .imagelink3 .il3-side img {
     height: auto !important;
   }
+  /* === インディケーターを画像の下端に重ねる（距離ゼロ） === */
+.imagelink3 .il3-carousel {
+  position: relative;
+  gap: 0; /* ビューポートとインディケーターの隙間をなくす */
+}
+
+/* 絶対配置で重ねる。親(.il3-carousel)基準で中央寄せ */
+.imagelink3 .il3-indicators {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;              /* 画像との距離。好みに応じて 6〜12px で微調整 */
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 4px 6px;         /* タップしやすさ確保（背景つける場合に備え） */
+  background: transparent;  /* 背景を付けたいなら rgba(0,0,0,.35) などに変更 */
+  border-radius: 9999px;
+  z-index: 2;
+}
+
+/* モバイルは少し余白を詰める */
+@media (max-width: 900px) {
+  .imagelink3 .il3-indicators {
+    bottom: 6px;
+    padding: 4px 6px;
+  }
+}
+
+/* ドットサイズはそのまま。大きくしたいなら下を調整
+.imagelink3 .il3-indicators button { width: 12px; height: 12px; }
+*/
+
 }
