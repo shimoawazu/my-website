@@ -1,10 +1,10 @@
 /* imagelink3
-   - ブロック直下の子 <div> を画像アイテムとして扱う
-   - 最後の2アイテムは右カラム（縦2リンク）
-   - それ以外を左カラムの3枚同時表示カルーセルにする
-   - 幅は同階層の .imagelink（上段）の左右実寸に合わせる
-   - 高さはカルーセル画像の高さに合わせ、右2枚は半分ずつに分配
-   - 3秒ごとに1画像ずつスライド、無限ループ、インジケーターも同期
+   - 直下の子 <div> 群のうち最後の2つを右カラム（縦2リンク）、
+     それ以外を左カラムの3枚同時表示カルーセルにする
+   - 幅は同階層の .imagelink の左右実寸（左最大幅・右最小幅）に完全一致
+   - カラム間ギャップも .imagelink に合わせる
+   - 高さはカルーセル画像に合わせ、右2枚はその 1/2 ずつ
+   - 3秒ごとに1画像スライド、無限ループ、インジケーター同期
 */
 
 function qsa(el, sel) { return Array.from(el.querySelectorAll(sel)); }
@@ -12,9 +12,9 @@ function one(el, sel) { return el.querySelector(sel); }
 
 function onceImagesLoaded(root, cb) {
   const imgs = qsa(root, 'img');
-  const waiting = imgs.filter((i) => !i.complete).length;
-  if (waiting === 0) { cb(); return; }
-  let left = waiting;
+  const wait = imgs.filter((i) => !i.complete).length;
+  if (wait === 0) { cb(); return; }
+  let left = wait;
   const done = () => { if (--left <= 0) cb(); };
   imgs.forEach((img) => {
     if (!img.complete) {
@@ -29,27 +29,53 @@ function debounce(fn, ms = 150) {
   return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
 }
 
-/* 上段 .imagelink から左右カラムの実寸を推定 */
+/* .imagelink から実寸を厳密採寸
+   - 左カラム = 子要素の中で最も幅が大きいもの
+   - 右カラム = 子要素の中で最も幅が小さいもの（右カラムのカード）
+   - gap = 右カラム左端 - 左カラム右端
+*/
 function measureFromImagelink(parent, row) {
   const imagelink = one(parent, ':scope > .imagelink');
-  const ilRect = imagelink?.getBoundingClientRect();
-  const totalW = Math.round(ilRect?.width || row.getBoundingClientRect().width || parent.clientWidth || 1200);
+  const containerRect = imagelink?.getBoundingClientRect()
+    || row.getBoundingClientRect();
 
-  // 右幅の参照（imagelink の2番目の子divがあればそれ、なければ最後）
-  const rightProbe = imagelink?.querySelector(':scope > div:nth-child(2)') || imagelink?.querySelector(':scope > div:last-child');
-  let rightW = Math.round(rightProbe?.getBoundingClientRect().width || totalW * 0.33);
-  if (rightW >= totalW) rightW = Math.floor(totalW / 3);
+  const children = imagelink ? qsa(imagelink, ':scope > div') : [];
+  const rects = children.map((c) => c.getBoundingClientRect())
+    .filter((r) => r.width > 0);
 
-  const gap = 16;
-  const leftW = Math.max(200, totalW - rightW - gap);
+  let leftRect = null;
+  let rightRect = null;
+
+  if (rects.length >= 2) {
+    // 最大幅 = 左、最小幅 = 右 とみなす
+    leftRect = rects.reduce((a, b) => (a.width >= b.width ? a : b));
+    rightRect = rects.reduce((a, b) => (a.width <= b.width ? a : b));
+  } else {
+    // フォールバック：3:1 の比率仮定
+    const totalW = Math.round(containerRect.width || parent.clientWidth || 1200);
+    return {
+      totalW,
+      leftW: Math.round(totalW * 0.66),
+      rightW: Math.round(totalW * 0.34),
+      gap: 16,
+    };
+  }
+
+  const totalW = Math.round(containerRect.width);
+  const leftW  = Math.round(leftRect.width);
+  const rightW = Math.round(rightRect.width);
+
+  // 列間ギャップを幾何的に算出
+  const leftRightEdge = leftRect.left + leftRect.width;
+  const gap = Math.max(0, Math.round(rightRect.left - leftRightEdge));
+
   return { totalW, leftW, rightW, gap };
 }
 
-/* 子<div> からカード要素を生成 */
+/* 子<div> からカードを生成 */
 function createCardFromCell(cell) {
   const card = document.createElement('div');
   card.className = 'il3-card';
-  // 著者HTMLの中身を移動（:scope > div > a/picture/img の形が多い）
   const inner = cell.querySelector(':scope > div') || cell;
   card.appendChild(inner);
   return card;
@@ -59,24 +85,22 @@ export default function decorate(block) {
   const parent = block.parentElement;
   if (!parent) return;
 
-  // 元アイテム収集
+  // アイテム収集
   const items = qsa(block, ':scope > div').filter((d) => d.children.length > 0);
-  if (items.length < 3) return; // カルーセル(>=1) + 右2が必要
+  if (items.length < 3) return; // 左カルーセル(>=1) + 右2
 
-  // 分割：最後の2つを右、残りを左カルーセル
+  // 分割
   const sideCells = items.slice(-2);
-  const carCells = items.slice(0, -2);
+  const carCells  = items.slice(0, -2);
   const N = carCells.length;
 
-  // 既存内容クリアして骨格を作る
+  // 骨格
   block.innerHTML = '';
   const row = document.createElement('div');
   row.className = 'il3-row';
-  // インラインで横並び強制（テーマの全幅スタイルに勝つ）
   Object.assign(row.style, {
     display: 'flex',
     alignItems: 'flex-start',
-    gap: '16px',
     marginLeft: 'auto',
     marginRight: 'auto',
   });
@@ -104,86 +128,25 @@ export default function decorate(block) {
   row.appendChild(colRight);
   block.appendChild(row);
 
-  // 左：カードを構築（N枚）
+  // 左カード
   const cards = carCells.map(createCardFromCell);
   cards.forEach((c) => track.appendChild(c));
 
-  // 無限用クローン（表示数=3ぶん）
+  // 無限用クローン（表示数=3）
   const visible = Math.min(3, N);
   const clones = cards.slice(0, visible).map((c) => c.cloneNode(true));
   clones.forEach((cl) => track.appendChild(cl));
 
-  // 右：最後の2つを縦並び
+  // 右：最後の2つ
   sideCells.forEach((cell) => {
     const wrap = document.createElement('div');
     wrap.className = 'il3-side-item';
-    // cell の中身を移動
     const inner = cell.querySelector(':scope > div') || cell;
     wrap.appendChild(inner);
     colRight.appendChild(wrap);
   });
 
-  // 寸法計算と適用
-  const GAP = 16;
-  const applyLayout = () => {
-    const { totalW, leftW, rightW } = measureFromImagelink(parent, row);
-
-    // 行の横幅 = 上段 imagelink と合わせる
-    Object.assign(row.style, {
-      width: `${totalW}px`,
-      maxWidth: `${totalW}px`,
-    });
-
-    // 左右の幅をインラインで固定
-    Object.assign(colLeft.style, {
-      flex: '0 0 auto',
-      width: `${leftW}px`,
-      maxWidth: `${leftW}px`,
-      boxSizing: 'border-box',
-      display: 'block',
-    });
-    Object.assign(colRight.style, {
-      flex: '0 0 auto',
-      width: `${rightW}px`,
-      maxWidth: `${rightW}px`,
-      boxSizing: 'border-box',
-      display: 'block',
-    });
-
-    // カード幅（3枚並び）
-    const cardW = Math.floor(leftW / 3);
-    cards.concat(clones).forEach((card) => {
-      card.style.width = `${cardW}px`;
-      card.style.height = '100%';
-    });
-
-    // 高さ算出：最初の画像の自然比から推定（読み込み済み前提）
-    const sampleImg = one(track, '.il3-card img');
-    let cardH = 300;
-    if (sampleImg?.naturalWidth) {
-      cardH = Math.round(cardW * (sampleImg.naturalHeight / sampleImg.naturalWidth));
-      cardH = Math.max(120, cardH);
-    }
-    viewport.style.height = `${cardH}px`;
-
-    // 右2枚：高さ半分ずつ
-    const each = Math.max(1, Math.floor((cardH - GAP) / 2));
-    qsa(colRight, '.il3-side-item').forEach((wrap) => {
-      Object.assign(wrap.style, {
-        height: `${each}px`,
-        width: '100%',
-      });
-      const pic = one(wrap, 'picture');
-      if (pic) Object.assign(pic.style, { height: '100%', width: '100%', display: 'block' });
-      const img = one(wrap, 'img');
-      if (img) Object.assign(img.style, { height: '100%', width: '100%', objectFit: 'cover' });
-    });
-
-    // トラックの初期位置再適用
-    goTo(current, false);
-  };
-
-  // インジケーター作成（1画像=1ドット）
+  // インジケーター
   indicators.innerHTML = '';
   for (let i = 0; i < N; i += 1) {
     const li = document.createElement('li');
@@ -200,10 +163,10 @@ export default function decorate(block) {
     indicators.appendChild(li);
   }
 
-  // 遷移制御
   const DURATION = 400;
-  let current = 0; // 先頭
+  let current = 0;
   let timer = null;
+  let measuredGap = 16;
 
   function setTransition(on) {
     track.style.transition = on ? `transform ${DURATION}ms ease` : 'none';
@@ -214,7 +177,6 @@ export default function decorate(block) {
     const cardWpx = track.firstElementChild?.getBoundingClientRect().width || 0;
     const offset = -index * cardWpx;
     track.style.transform = `translateX(${offset}px)`;
-    // インジケーター
     const active = (index % N + N) % N;
     qsa(indicators, 'button').forEach((b, i) => {
       if (i === active) b.setAttribute('aria-current', 'true');
@@ -222,24 +184,20 @@ export default function decorate(block) {
     });
   }
 
-  // 無限ループ用の巻き戻し
   track.addEventListener('transitionend', () => {
     if (current >= N) {
-      // クローン領域に入ったら本体0へ瞬間移動
       setTransition(false);
       current = 0;
       goTo(current, false);
-      // リフローしてアニメを復活させる
-      void track.offsetWidth; // reflow
+      void track.offsetWidth;
       setTransition(true);
     }
   });
 
   function stepNext() {
-    current += 1;         // 1画像ずつ
-    goTo(current, true);  // クローン領域まで遷移
+    current += 1;        // 1画像ずつ
+    goTo(current, true);
   }
-
   function startAuto() {
     if (timer) return;
     timer = setInterval(stepNext, 3000);
@@ -250,22 +208,83 @@ export default function decorate(block) {
     timer = null;
   }
 
-  // ホバー/フォーカスで一時停止
   block.addEventListener('mouseenter', stopAuto);
   block.addEventListener('mouseleave', startAuto);
   block.addEventListener('focusin', stopAuto);
   block.addEventListener('focusout', startAuto);
 
-  // 初期レイアウト：画像ロード後に厳密計測
+  // レイアウト適用（幅を imagelink に厳密一致）
+  const applyLayout = () => {
+    const { totalW, leftW, rightW, gap } = measureFromImagelink(parent, row);
+    measuredGap = gap;
+
+    // 行幅と列間ギャップ
+    Object.assign(row.style, {
+      width: `${totalW}px`,
+      maxWidth: `${totalW}px`,
+      gap: `${gap}px`,
+    });
+
+    // 左右幅をピクセルで一致させる
+    Object.assign(colLeft.style, {
+      flex: '0 0 auto',
+      width: `${leftW}px`,
+      maxWidth: `${leftW}px`,
+      boxSizing: 'border-box',
+      display: 'block',
+    });
+    Object.assign(colRight.style, {
+      flex: '0 0 auto',
+      width: `${rightW}px`,
+      maxWidth: `${rightW}px`,
+      boxSizing: 'border-box',
+      display: 'block',
+      gap: `${gap}px`,   // 右カラムの縦隙間も合わせる（好みに応じて固定でもOK）
+    });
+
+    // カード幅（3枚並び）
+    const cardW = Math.floor(leftW / 3);
+    cards.concat(clones).forEach((card) => {
+      card.style.width = `${cardW}px`;
+      card.style.height = '100%';
+    });
+
+    // 高さ算出
+    const sampleImg = one(track, '.il3-card img');
+    let cardH = 300;
+    if (sampleImg?.naturalWidth) {
+      cardH = Math.round(cardW * (sampleImg.naturalHeight / sampleImg.naturalWidth));
+      cardH = Math.max(120, cardH);
+    }
+    viewport.style.height = `${cardH}px`;
+
+    // 右2枚：高さ半分
+    const each = Math.max(1, Math.floor((cardH - gap) / 2));
+    qsa(colRight, '.il3-side-item').forEach((wrap) => {
+      Object.assign(wrap.style, {
+        height: `${each}px`,
+        width: '100%',
+      });
+      const pic = one(wrap, 'picture');
+      if (pic) Object.assign(pic.style, { height: '100%', width: '100%', display: 'block' });
+      const img = one(wrap, 'img');
+      if (img) Object.assign(img.style, { height: '100%', width: '100%', objectFit: 'cover' });
+    });
+
+    // 位置リセット
+    goTo(current, false);
+  };
+
   const recalc = () => applyLayout();
   const onResize = debounce(recalc, 150);
 
-  const waitTargets = [parent, block];
-  let pending = waitTargets.length;
+  // 画像読み込み後に厳密採寸
+  let pending = 2;
   const done = () => { if (--pending <= 0) { recalc(); goTo(0, false); startAuto(); } };
-  waitTargets.forEach((t) => onceImagesLoaded(t, done));
+  onceImagesLoaded(parent, done); // imagelink 側の実寸確定
+  onceImagesLoaded(block, done);  // 自身の画像確定
 
-  // すぐ一回（とれた寸法で先に当てる）
+  // 即時も一度当てる
   recalc();
   goTo(0, false);
   startAuto();

@@ -1,9 +1,7 @@
 /* ========== imagelink3 ========== */
-/* レイアウトは JS がインライン指定で強制（幅崩れ/全幅化対策）し、
-   ここでは見た目の最低限だけを定義します */
 
 .imagelink3 .il3-row {
-  /* JS が display:flex / width をインラインで指定 */
+  /* gap と width は JS で実寸に合わせて上書き */
   gap: 16px;
   margin-left: auto;
   margin-right: auto;
@@ -16,25 +14,21 @@
   gap: 8px;
 }
 
-/* ビューポート（高さは JS が計算して指定） */
 .imagelink3 .il3-viewport {
   position: relative;
   overflow: hidden;
   width: 100%;
-  /* height は JS でセット */
 }
 
-/* トラック */
 .imagelink3 .il3-track {
   display: flex;
   will-change: transform;
   transform: translateX(0);
-  /* transition は JS で付け外し */
 }
 
 /* 1カード（1画像） */
 .imagelink3 .il3-card {
-  flex: 0 0 auto;     /* 幅は JS が固定値で指定 */
+  flex: 0 0 auto;       /* 幅は JS で固定 */
   height: 100%;
   box-sizing: border-box;
 }
@@ -48,7 +42,7 @@
 }
 
 .imagelink3 .il3-card img {
-  object-fit: cover;  /* タイルっぽく揃える。お好みで contain に */
+  object-fit: cover;
 }
 
 /* インジケーター */
@@ -78,7 +72,7 @@
 .imagelink3 .il3-side {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 16px;            /* 縦の隙間も JS で上書きする */
 }
 
 .imagelink3 .il3-side a,
@@ -93,7 +87,7 @@
   object-fit: cover;
 }
 
-/* モバイルは縦積みフォールバック */
+/* モバイル：縦積み */
 @media (max-width: 900px) {
   .imagelink3 .il3-row {
     display: block !important;
