@@ -1,10 +1,7 @@
-/* imagelink3 (70/30固定・モバイル1枚表示)
-   - block直下の子<div>群のうち、最後の2つを右カラム（縦2リンク）、
-     それ以外を左カラムのカルーセル要素にする
-   - デスクトップは一度に3枚表示、モバイル（<=900px）は1枚表示
-   - 3秒ごとに1枚進む無限ループ、インジケーター同期
+/* imagelink3 robust: 画像が出ないケース対策
+   - CSSフォールバック + JSで幅0時の再計測
+   - 3秒オート / 無限 / モバイル1枚表示
 */
-
 function qsa(el, sel) { return Array.from(el.querySelectorAll(sel)); }
 function one(el, sel) { return el.querySelector(sel); }
 function onceImagesLoaded(root, cb) {
@@ -37,49 +34,34 @@ function createCardFromCell(cell) {
 
 export default function decorate(block) {
   const items = qsa(block, ':scope > div').filter((d) => d.children.length > 0);
-  if (items.length < 3) return; // 左カルーセル(>=1) + 右2 が必要
+  if (items.length < 3) return;
 
-  /* 分割：最後の2つは右、残りは左カルーセル */
+  // 分割
   const sideCells = items.slice(-2);
   const carCells  = items.slice(0, -2);
   const N = carCells.length;
 
-  /* 骨組み */
+  // 骨組み
   block.innerHTML = '';
-  const row = document.createElement('div');
-  row.className = 'il3-row';
-
-  const colLeft = document.createElement('div');
-  colLeft.className = 'il3-carousel';
-
-  const viewport = document.createElement('div');
-  viewport.className = 'il3-viewport';
-
-  const track = document.createElement('div');
-  track.className  = 'il3-track';
+  const row = document.createElement('div'); row.className = 'il3-row';
+  const colLeft  = document.createElement('div'); colLeft.className  = 'il3-carousel';
+  const viewport = document.createElement('div'); viewport.className = 'il3-viewport';
+  const track    = document.createElement('div'); track.className    = 'il3-track';
   viewport.appendChild(track);
+  const indicators = document.createElement('ol'); indicators.className = 'il3-indicators';
+  colLeft.appendChild(viewport); colLeft.appendChild(indicators);
 
-  const indicators = document.createElement('ol');
-  indicators.className = 'il3-indicators';
-  colLeft.appendChild(viewport);
-  colLeft.appendChild(indicators);
-
-  const colRight = document.createElement('div');
-  colRight.className = 'il3-side';
-
-  row.appendChild(colLeft);
-  row.appendChild(colRight);
+  const colRight = document.createElement('div'); colRight.className = 'il3-side';
+  row.appendChild(colLeft); row.appendChild(colRight);
   block.appendChild(row);
 
-  /* 左：カード配置 */
+  // 左：カード
   const cards = carCells.map(createCardFromCell);
   cards.forEach((c) => track.appendChild(c));
+  // 無限クローン（最大3枚）
+  cards.slice(0, 3).forEach((c) => track.appendChild(c.cloneNode(true)));
 
-  /* 無限用クローン（最大可視=3ぶん） */
-  const clones = cards.slice(0, 3).map((c) => c.cloneNode(true));
-  clones.forEach((cl) => track.appendChild(cl));
-
-  /* 右：最後の2つ */
+  // 右：2枚
   sideCells.forEach((cell) => {
     const wrap = document.createElement('div');
     wrap.className = 'il3-side-item';
@@ -88,7 +70,7 @@ export default function decorate(block) {
     colRight.appendChild(wrap);
   });
 
-  /* インジケーター */
+  // インジケーター
   indicators.innerHTML = '';
   for (let i = 0; i < N; i += 1) {
     const li = document.createElement('li');
@@ -105,7 +87,7 @@ export default function decorate(block) {
     indicators.appendChild(li);
   }
 
-  /* スライド制御 */
+  // スライド制御
   const DURATION = 400;
   let current = 0;
   let timer = null;
@@ -120,6 +102,14 @@ export default function decorate(block) {
       else b.removeAttribute('aria-current');
     });
   }
+  function measureLeftWidth() {
+    let w = colLeft.getBoundingClientRect().width;
+    if (!w) {
+      const rowW = row.getBoundingClientRect().width || block.getBoundingClientRect().width;
+      w = rowW ? rowW * 0.7 : 600; // 70%推定 or デフォルト
+    }
+    return Math.max(1, Math.floor(w));
+  }
   function goTo(index, animate = true) {
     setTransition(animate);
     const cardEl = track.firstElementChild;
@@ -130,7 +120,6 @@ export default function decorate(block) {
   }
   track.addEventListener('transitionend', () => {
     if (current >= N) {
-      /* クローン領域に来たら瞬時に巻き戻す */
       setTransition(false);
       current = 0;
       goTo(current, false);
@@ -147,27 +136,27 @@ export default function decorate(block) {
   block.addEventListener('focusin', stopAuto);
   block.addEventListener('focusout', startAuto);
 
-  /* レイアウト計算：高さとカード幅（70/30比率はCSSが担当） */
+  // レイアウト
   const applyLayout = () => {
     const visible = getVisibleCount();
-    const leftW = colLeft.clientWidth;
+    const leftW = measureLeftWidth();
     const cardW = Math.floor(leftW / visible);
 
-    // カード幅
+    // カードサイズ
     qsa(track, '.il3-card').forEach((card) => {
       card.style.width = `${cardW}px`;
       card.style.height = '100%';
     });
 
-    // 高さ計算：サンプル画像の比率から推定（なければ300px）
+    // 高さ：画像比率が取れればそれを使い、ダメなら16:9
     const sample = one(track, '.il3-card img');
-    let h = 300;
-    if (sample && sample.naturalWidth) {
+    let h = Math.round(cardW * 9 / 16);
+    if (sample && sample.naturalWidth > 0) {
       h = Math.max(120, Math.round(cardW * (sample.naturalHeight / sample.naturalWidth)));
     }
     viewport.style.height = `${h}px`;
 
-    // 右2枚はカルーセル高さを等分（縦ギャップぶんを差し引き）
+    // 右2枚の高さ調整
     const gap = parseInt(getComputedStyle(row).gap || '16', 10) || 16;
     const each = Math.max(1, Math.floor((h - gap) / 2));
     qsa(colRight, '.il3-side-item').forEach((wrap) => {
@@ -176,23 +165,20 @@ export default function decorate(block) {
       const img = one(wrap, 'img');      if (img) { img.style.width = '100%'; img.style.height = '100%'; img.style.objectFit = 'cover'; }
     });
 
-    // 現在位置を再適用
+    // 現在位置再適用
     goTo(current, false);
   };
 
-  const onResize = debounce(() => {
-    // 表示枚数が変わった場合も cardW を再計算
-    applyLayout();
-  }, 150);
+  const onResize = debounce(() => applyLayout(), 150);
 
-  // 初期化：画像読み込み後にサイズ確定
-  let waits = 2;
-  const ready = () => { if (--waits <= 0) { applyLayout(); goTo(0, false); startAuto(); } };
-  onceImagesLoaded(block, ready);   // 自身
-  onceImagesLoaded(document, ready);/* ページ全体(念のため) */
+  // 初期：2パスで確実にサイズ確定
+  const firstPass = () => { applyLayout(); requestAnimationFrame(() => applyLayout()); };
+  let waits = 1; // block内の画像で十分
+  const ready = () => { if (--waits <= 0) { firstPass(); startAuto(); } };
+  onceImagesLoaded(block, ready);
 
-  // 即時適用（画像未読込でも暫定）
-  applyLayout(); goTo(0, false); startAuto();
+  // 画像未読込でも仮で描画
+  firstPass(); startAuto();
 
   window.addEventListener('resize', onResize, { passive: true });
 }
