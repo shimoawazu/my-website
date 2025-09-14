@@ -1,0 +1,111 @@
+/* ========== imagelink3 ========== */
+/* レイアウトは JS がインライン指定で強制（幅崩れ/全幅化対策）し、
+   ここでは見た目の最低限だけを定義します */
+
+.imagelink3 .il3-row {
+  /* JS が display:flex / width をインラインで指定 */
+  gap: 16px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* 左：カルーセル */
+.imagelink3 .il3-carousel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ビューポート（高さは JS が計算して指定） */
+.imagelink3 .il3-viewport {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  /* height は JS でセット */
+}
+
+/* トラック */
+.imagelink3 .il3-track {
+  display: flex;
+  will-change: transform;
+  transform: translateX(0);
+  /* transition は JS で付け外し */
+}
+
+/* 1カード（1画像） */
+.imagelink3 .il3-card {
+  flex: 0 0 auto;     /* 幅は JS が固定値で指定 */
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.imagelink3 .il3-card a,
+.imagelink3 .il3-card picture,
+.imagelink3 .il3-card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.imagelink3 .il3-card img {
+  object-fit: cover;  /* タイルっぽく揃える。お好みで contain に */
+}
+
+/* インジケーター */
+.imagelink3 .il3-indicators {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 6px 0 0;
+}
+
+.imagelink3 .il3-indicators button {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border-radius: 50%;
+  background: #ccc;
+  border: 0;
+}
+
+.imagelink3 .il3-indicators button[aria-current="true"] {
+  background: #333;
+}
+
+/* 右：縦2リンク（高さは JS が同期） */
+.imagelink3 .il3-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.imagelink3 .il3-side a,
+.imagelink3 .il3-side picture,
+.imagelink3 .il3-side img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.imagelink3 .il3-side img {
+  object-fit: cover;
+}
+
+/* モバイルは縦積みフォールバック */
+@media (max-width: 900px) {
+  .imagelink3 .il3-row {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+  .imagelink3 .il3-carousel,
+  .imagelink3 .il3-side {
+    width: 100% !important;
+    max-width: none !important;
+  }
+  .imagelink3 .il3-side img {
+    height: auto !important;
+  }
+}
