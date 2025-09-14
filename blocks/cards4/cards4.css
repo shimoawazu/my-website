@@ -6,7 +6,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(257px, 1fr));
   gap: 24px;
-  grid-auto-flow: dense; /* allow spanning item to pack nicely */
+  grid-auto-flow: dense;
 }
 
 /* Card frame */
@@ -15,7 +15,7 @@
   background-color: var(--background-color);
 }
 
-/* 3rd card doubles width on roomy layouts */
+/* 3rd card doubles width */
 .cards4 > ul > li:nth-child(3) {
   grid-column: span 2;
 }
@@ -29,14 +29,14 @@
   line-height: 0;
 }
 
-/* Media */
+/* Images: all square */
 .cards4 > ul > li img {
   width: 100%;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 1 / 1;   /* 正方形 */
   object-fit: cover;
 }
 
-/* Narrow screens: fallback to normal width */
+/* Narrow screens: fallback */
 @media (max-width: 560px) {
   .cards4 > ul > li:nth-child(3) {
     grid-column: span 1;
