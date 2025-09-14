@@ -2,7 +2,7 @@
 .imagelink3 {
   --il3-gap: 16px;                 /* 左右カラムの隙間 */
   --il3-indicator-gap: 8px;
-  --il3-indicator-offset: 4px;     /* 画像下端との距離（小さくして近づける） */
+  --il3-indicator-offset: 2px;     /* 画像下端との距離（小さくして近づける） */
   --il3-visible: 3;                /* デスクトップは3枚見せ */
 }
 
