@@ -1,63 +1,74 @@
 /*
- * accordion2 Block
- * - Click to open/close <details>
- * - Bouncy open animation (height expand + subtle overshoot)
- * - No auto-play
+ * Accordion2
+ * - クリックで開閉
+ * - 「開くときだけ」中身が少し弾む（バウンス）
+ * - 既に<details>構造でも、行レイアウトでもOK
  */
 
 function prefersReducedMotion() {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-function ensureContentWrapper(bodyEl) {
-  // 内側に1枚ラッパーを作って content の弾みを付ける
+function ensureBodyAndInner(detailsEl) {
+  // body要素（summary以外）に .accordion2-item-body を付け、
+  // その直下に .accordion2-content を1枚作る
+  let bodyEl = detailsEl.querySelector(':scope > .accordion2-item-body');
+  if (!bodyEl) {
+    // summary以外の直下要素をまとめる
+    const fr = document.createDocumentFragment();
+    [...detailsEl.children].forEach((c) => { if (c.tagName !== 'SUMMARY') fr.appendChild(c); });
+    bodyEl = document.createElement('div');
+    bodyEl.className = 'accordion2-item-body';
+    bodyEl.appendChild(fr);
+    detailsEl.appendChild(bodyEl);
+  }
+
   let inner = bodyEl.querySelector(':scope > .accordion2-content');
   if (!inner) {
     inner = document.createElement('div');
     inner.className = 'accordion2-content';
-    while (bodyEl.firstChild) inner.appendChild(bodyEl.firstChild);
+    while (bodyEl.firstChild && bodyEl.firstChild !== inner) {
+      if (bodyEl.firstChild.classList && bodyEl.firstChild.classList.contains('accordion2-content')) break;
+      inner.appendChild(bodyEl.firstChild);
+    }
     bodyEl.appendChild(inner);
   }
-  return inner;
+  return { bodyEl, inner };
 }
 
-function animateOpen(detailsEl, bodyEl) {
+function animateOpen(detailsEl, bodyEl, inner) {
   if (prefersReducedMotion()) { detailsEl.open = true; return; }
 
-  // まず open=true にして自然高さを測る
+  // 先にopenして自然高さを取得
   detailsEl.open = true;
-  const inner = ensureContentWrapper(bodyEl);
 
-  // height アニメーション準備
+  const startH = 0;
   bodyEl.style.overflow = 'hidden';
-  bodyEl.style.height = '0px';
+  bodyEl.style.height = `${startH}px`;
   // reflow
   // eslint-disable-next-line no-unused-expressions
   bodyEl.offsetHeight;
 
   const endH = bodyEl.scrollHeight;
-
-  // 1) 高さを伸ばす（スッと）
   const expand = bodyEl.animate(
     [
-      { height: '0px', opacity: 0, transform: 'translateY(-2px) scaleY(.985)' },
+      { height: `${startH}px`, opacity: 0, transform: 'translateY(-2px) scaleY(.985)' },
       { height: `${endH}px`, opacity: 1, transform: 'translateY(0) scaleY(1)' },
     ],
     { duration: 260, easing: 'cubic-bezier(.2,.8,.2,1)' },
   );
 
   expand.onfinish = () => {
-    // 自然レイアウトへ復帰
     bodyEl.style.height = 'auto';
     bodyEl.style.overflow = '';
 
-    // 2) 中身にだけ軽いバウンス（オーバーシュート）
+    // 中身にだけ軽いバウンス（オーバーシュート）
     inner.animate(
       [
-        { transform: 'scaleY(1)', offset: 0 },
-        { transform: 'scaleY(1.02)', offset: 0.45 },
-        { transform: 'scaleY(0.992)', offset: 0.8 },
-        { transform: 'scaleY(1)', offset: 1 },
+        { transform: 'scaleY(1)' },
+        { transform: 'scaleY(1.02)' },
+        { transform: 'scaleY(0.992)' },
+        { transform: 'scaleY(1)' },
       ],
       { duration: 280, easing: 'cubic-bezier(.2,.8,.2,1)' },
     );
@@ -67,7 +78,6 @@ function animateOpen(detailsEl, bodyEl) {
 function animateClose(detailsEl, bodyEl) {
   if (prefersReducedMotion()) { detailsEl.open = false; return; }
 
-  // 現在高さを測ってから閉じる
   const startH = bodyEl.scrollHeight;
   bodyEl.style.overflow = 'hidden';
   bodyEl.style.height = `${startH}px`;
@@ -90,32 +100,34 @@ function animateClose(detailsEl, bodyEl) {
   };
 }
 
-function wireToggle(detailsEl, summaryEl, bodyEl) {
-  // ネイティブのトグルを抑止し、アニメーション制御
-  summaryEl.addEventListener('click', (e) => {
-    // 選択ドラッグ中の誤作動を避ける
+function wireToggle(detailsEl) {
+  const summary = detailsEl.querySelector(':scope > summary');
+  if (!summary) return;
+
+  const { bodyEl, inner } = ensureBodyAndInner(detailsEl);
+
+  // ネイティブtoggleを抑止してアニメ制御
+  summary.addEventListener('click', (e) => {
+    // テキスト選択中の誤動作回避
     if (window.getSelection && String(window.getSelection())) return;
 
     e.preventDefault();
     const isOpen = detailsEl.hasAttribute('open');
-    if (isOpen) {
-      animateClose(detailsEl, bodyEl);
-    } else {
-      animateOpen(detailsEl, bodyEl);
-    }
+    if (isOpen) animateClose(detailsEl, bodyEl);
+    else animateOpen(detailsEl, bodyEl, inner);
   });
 
-  // キーボードでも同様の挙動（Enter/Space）
-  summaryEl.addEventListener('keydown', (e) => {
+  // Enter/Space で同等挙動
+  summary.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      summaryEl.click();
+      summary.click();
     }
   });
 }
 
 export default function decorate(block) {
-  // 既存が <details> 羅列ならそのまま使う。なければ行から生成。
+  // 1) 既存 <details> のまま使う or 行から生成
   const rows = [...block.children];
   const alreadyDetails = rows[0] && rows[0].tagName === 'DETAILS';
 
@@ -127,31 +139,17 @@ export default function decorate(block) {
       const summary = document.createElement('summary');
       if (labelEl) summary.append(...labelEl.childNodes);
 
-      const body = document.createElement('div');
-      body.className = 'accordion2-item-body';
-      if (bodyEl) body.append(...bodyEl.childNodes);
+      if (bodyEl) details.append(summary, bodyEl);
+      else details.append(summary);
 
-      details.append(summary, body);
       row.replaceWith(details);
-    });
-  } else {
-    // details がすでにある場合は body クラスだけ整える
-    block.querySelectorAll(':scope > details > :not(summary)').forEach((el) => {
-      el.classList.add('accordion2-item-body');
     });
   }
 
-  // クリックで開閉（デフォルトは閉）
-  const items = [...block.querySelectorAll(':scope > details')];
-  items.forEach((d) => {
-    const summary = d.querySelector(':scope > summary');
-    const body = d.querySelector(':scope > .accordion2-item-body') || d.querySelector(':scope > :not(summary)');
-    if (!summary || !body) return;
-
-    // 初期は閉じる（データ属性で初期オープン可）
+  // 2) すべての details に配線（初期状態は閉）
+  [...block.querySelectorAll(':scope > details')].forEach((d) => {
     if (d.dataset.open === 'true') d.open = true;
     else d.removeAttribute('open');
-
-    wireToggle(d, summary, body);
+    wireToggle(d);
   });
 }
