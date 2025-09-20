@@ -1,0 +1,61 @@
+.accordion2 details {
+  border: 1px solid #dadada;
+}
+
+/* stylelint-disable-next-line no-descending-specificity */
+.accordion2 details + details {
+  margin-top: 24px;
+}
+
+.accordion2 details p {
+  margin-bottom: 0.8em;
+}
+
+.accordion2 details summary {
+  position: relative;
+  padding: 0 16px;
+  padding-right: 46px;
+  cursor: pointer;
+  list-style: none;
+  overflow: auto;
+  transition: background-color 0.2s;
+}
+
+.accordion2 details[open] summary {
+  background-color: var(--light-color);
+}
+
+.accordion2 details summary:focus,
+.accordion2 details summary:hover {
+  background-color: var(--light-color);
+}
+
+.accordion2 details summary::-webkit-details-marker {
+  display: none;
+}
+
+.accordion2 details summary::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 18px;
+  transform: translateY(-50%) rotate(135deg);
+  width: 6px;
+  height: 6px;
+  border: 2px solid;
+  border-width: 2px 2px 0 0;
+  transition: transform 0.2s;
+}
+
+.accordion2 details[open] summary::after {
+  transform: translateY(-50%) rotate(-45deg);
+}
+
+.accordion2 details .accordion2-item-body {
+  padding: 0 16px;
+}
+
+.accordion2 details[open] .accordion2-item-body {
+  border-top: 1px solid #dadada;
+  background-color: var(--background-color);
+}
