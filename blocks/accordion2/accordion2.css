@@ -1,20 +1,9 @@
-/* ===== Accordion2 (CSS only: 見た目と軽い効果) ===== */
-
-.accordion2 {
-  --a2-radius: 12px;
-  --a2-bd: #e6e6e6;
-  --a2-bg: var(--background-color, #fff);
-  --a2-light: var(--light-color, #f5f5f5);
-  --a2-fg: var(--text-color, #111);
-  --a2-shadow: 0 4px 14px rgba(0,0,0,.06);
-}
+/* ===== Accordion2 (no animation) ===== */
 
 .accordion2 details {
-  border: 1px solid var(--a2-bd);
-  border-radius: var(--a2-radius);
-  background: var(--a2-bg);
-  box-shadow: none;
-  overflow: clip;
+  border: 1px solid #dadada;
+  border-radius: 8px;
+  background: var(--background-color, #fff);
 }
 
 .accordion2 details + details {
@@ -26,16 +15,11 @@
   padding: 14px 48px 14px 16px;
   cursor: pointer;
   list-style: none;
-  color: var(--a2-fg);
   user-select: none;
-  transition: background-color .2s;
-  outline: none;
 }
-.accordion2 details summary::-webkit-details-marker { display: none; }
 
-.accordion2 details summary:hover,
-.accordion2 details summary:focus-visible {
-  background: var(--a2-light);
+.accordion2 details summary::-webkit-details-marker {
+  display: none;
 }
 
 .accordion2 details summary::after {
@@ -48,7 +32,7 @@
   border: 2px solid currentColor;
   border-width: 2px 2px 0 0;
   transform: translateY(-50%) rotate(135deg);
-  transition: transform .25s cubic-bezier(.2,.8,.2,1);
+  transition: transform .2s;
 }
 
 .accordion2 details[open] summary::after {
@@ -56,36 +40,14 @@
 }
 
 .accordion2 .accordion2-item-body {
-  /* JSで高さアニメ、ここは余白だけ */
   padding: 0 16px 16px;
-  background: var(--a2-bg);
+  border-top: 1px solid #dadada;
+  background: var(--background-color, #fff);
+  color: var(--text-color, #111);
 }
 
-.accordion2 details[open] {
-  /* 開いた瞬間だけ、ふわっと影（CSS keyframes） */
-  animation: a2-pop-shadow .35s cubic-bezier(.2,.8,.2,1);
-}
-@keyframes a2-pop-shadow {
-  0%   { box-shadow: none; }
-  60%  { box-shadow: var(--a2-shadow); }
-  100% { box-shadow: var(--a2-shadow); }
-}
-
-/* 中身の“弾み”はJSで .accordion2-content に付与するが、
-   念のため CSS でも自然に見えるよう余白調整 */
-.accordion2 .accordion2-content > *:first-child { margin-top: 10px; }
-
-/* アクセシビリティ */
-.accordion2 details summary:focus-visible {
-  outline: 2px solid color-mix(in srgb, currentColor 35%, transparent);
-  outline-offset: 2px;
-}
-
-/* 低モーション環境 */
-@media (prefers-reduced-motion: reduce) {
-  .accordion2 details summary,
-  .accordion2 details summary::after {
-    transition: none !important;
-  }
-  .accordion2 details[open] { animation: none !important; }
+/* 開いているときにだけ濃いグレー背景 + 白文字 */
+.accordion2 details[open] .accordion2-item-body {
+  background-color: #333;
+  color: #fff;
 }
