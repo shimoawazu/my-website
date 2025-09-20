@@ -1,181 +1,81 @@
 /*
- * accordion2 Block
- * Animate open/close with WAAPI (no extra CSS injection)
- * - Smooth height animation (open/close)
- * - Tiny sparkle burst when opening
- * - Respects prefers-reduced-motion
+ * accordion Block
+ * Auto-toggle open/close every 3s for demo/verification.
+ * - Builds <details>/<summary> if rows are provided
+ * - Pauses on hover/focus, stops on user click
  */
-
-function prefersReducedMotion() {
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
-
-function sparkleBurst(anchorEl) {
-  if (prefersReducedMotion()) return;
-
-  const wrap = document.createElement('div');
-  wrap.style.position = 'absolute';
-  wrap.style.pointerEvents = 'none';
-  wrap.style.inset = '0';
-  wrap.style.overflow = 'visible';
-  // attach near summary’s chevron area
-  const rect = anchorEl.getBoundingClientRect();
-  const rightPad = 24; // near the ▶ chevron (CSS pads-right:46px)
-  wrap.style.right = `${rightPad}px`;
-  wrap.style.top = '0';
-
-  // position context
-  anchorEl.style.position ||= 'relative';
-  anchorEl.appendChild(wrap);
-
-  const count = 6;
-  for (let i = 0; i < count; i += 1) {
-    const p = document.createElement('div');
-    p.style.width = '6px';
-    p.style.height = '6px';
-    p.style.position = 'absolute';
-    p.style.top = '50%';
-    p.style.transform = 'translateY(-50%)';
-    p.style.borderRadius = '999px';
-    p.style.background = i % 2 ? 'currentColor' : 'rgba(0,0,0,.15)';
-    wrap.appendChild(p);
-
-    const angle = (Math.PI * 2 * i) / count;
-    const dist = 14 + Math.random() * 10;
-    const dx = Math.cos(angle) * dist;
-    const dy = Math.sin(angle) * dist - 6;
-
-    const anim = p.animate(
-      [
-        { transform: 'translate(0, -50%) scale(0.6)', opacity: 0 },
-        { transform: `translate(${dx}px, calc(-50% + ${dy}px)) scale(1)`, opacity: 1, offset: 0.35 },
-        { transform: `translate(${dx * 1.2}px, calc(-50% + ${dy * 1.2}px)) scale(0.6)`, opacity: 0 },
-      ],
-      { duration: 520 + Math.random() * 120, easing: 'cubic-bezier(.2,.8,.2,1)' },
-    );
-    anim.onfinish = () => p.remove();
-  }
-  setTimeout(() => wrap.remove(), 800);
-}
-
-function animateOpen(detailsEl, bodyEl) {
-  if (prefersReducedMotion()) {
-    detailsEl.open = true;
-    return;
-  }
-
-  // Ensure it's measurable
-  detailsEl.open = true;
-  bodyEl.style.overflow = 'hidden';
-  bodyEl.style.height = '0px';
-
-  // Force reflow to apply starting height
-  // eslint-disable-next-line no-unused-expressions
-  bodyEl.offsetHeight;
-
-  const end = bodyEl.scrollHeight;
-  const a = bodyEl.animate(
-    [
-      { height: '0px', opacity: 0, transform: 'translateY(-2px) scaleY(.98)' },
-      { height: `${end}px`, opacity: 1, transform: 'translateY(0) scaleY(1)' },
-    ],
-    { duration: 260, easing: 'cubic-bezier(.2,.8,.2,1)' },
-  );
-  a.onfinish = () => {
-    bodyEl.style.height = 'auto';
-    bodyEl.style.overflow = '';
-  };
-}
-
-function animateClose(detailsEl, bodyEl) {
-  if (prefersReducedMotion()) {
-    detailsEl.open = false;
-    return;
-  }
-
-  // Measure current height while still open
-  const start = bodyEl.scrollHeight;
-  bodyEl.style.overflow = 'hidden';
-  bodyEl.style.height = `${start}px`;
-
-  // Force reflow
-  // eslint-disable-next-line no-unused-expressions
-  bodyEl.offsetHeight;
-
-  const a = bodyEl.animate(
-    [
-      { height: `${start}px`, opacity: 1, transform: 'translateY(0) scaleY(1)' },
-      { height: '0px', opacity: 0, transform: 'translateY(-2px) scaleY(.98)' },
-    ],
-    { duration: 220, easing: 'cubic-bezier(.2,.8,.2,1)' },
-  );
-  a.onfinish = () => {
-    bodyEl.style.height = '';
-    bodyEl.style.overflow = '';
-    detailsEl.open = false;
-  };
-}
-
-/**
- * Intercept summary clicks:
- * - Prevent default toggle
- * - Run our animation, then set .open accordingly
- */
-function wireAnimatedToggle(detailsEl, summaryEl, bodyEl) {
-  summaryEl.addEventListener('click', (e) => {
-    // Allow text selection via keyboard/mouse drag without toggling accidentally
-    if (window.getSelection && String(window.getSelection())) return;
-
-    e.preventDefault();
-    const isOpen = detailsEl.hasAttribute('open');
-
-    if (isOpen) {
-      animateClose(detailsEl, bodyEl);
-    } else {
-      animateOpen(detailsEl, bodyEl);
-      sparkleBurst(summaryEl);
-    }
-  });
-
-  // Keyboard “boop” feedback
-  summaryEl.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      // Prevent native toggle; we will handle it via click programmatically
-      e.preventDefault();
-      summaryEl.click();
-      if (!prefersReducedMotion()) {
-        summaryEl.animate(
-          [{ transform: 'scale(1)' }, { transform: 'scale(0.96)' }, { transform: 'scale(1)' }],
-          { duration: 140, easing: 'cubic-bezier(.2,.8,.2,1)' },
-        );
-      }
-    }
-  });
-}
 
 export default function decorate(block) {
-  // The outer container should already have class "accordion2" per block system
-  // Build details/summary markup and attach animations
-  [...block.children].forEach((row) => {
-    const label = row.children[0];
-    const body = row.children[1];
+  // 1) 既に<details>構造なら流用。そうでなければ行から生成。
+  const rows = [...block.children];
+  const isAlreadyDetails = rows[0] && rows[0].tagName === 'DETAILS';
+  if (!isAlreadyDetails) {
+    rows.forEach((row) => {
+      const [labelEl, bodyEl] = row.children;
+      const details = document.createElement('details');
 
-    const summary = document.createElement('summary');
-    summary.className = 'accordion2-item-label';
-    summary.append(...label.childNodes);
+      const summary = document.createElement('summary');
+      if (labelEl) summary.append(...labelEl.childNodes);
 
-    body.classList.add('accordion2-item-body');
+      const body = document.createElement('div');
+      if (bodyEl) body.append(...bodyEl.childNodes);
+      body.className = 'accordion-item-body';
 
-    const details = document.createElement('details');
-    // class on <details> is optional because CSS targets ".accordion2 details"
-    details.append(summary, body);
+      details.append(summary, body);
+      row.replaceWith(details);
+    });
+  }
 
-    // Start closed by default; if original content had a hint like data-open, respect it
-    if (row.dataset.open === 'true' || row.getAttribute('data-open') === 'true') {
-      details.open = true;
+  // 2) 直下の<details>を取得
+  const items = [...block.querySelectorAll(':scope > details')];
+  if (!items.length) return;
+
+  // 3) いったん全て閉じる
+  items.forEach((d) => d.removeAttribute('open'));
+
+  let idx = -1;
+  let timerId = null;
+
+  function showNext() {
+    const prev = idx;
+    idx = (idx + 1) % items.length;
+    if (prev >= 0) items[prev].open = false;
+    items[idx].open = true;
+  }
+
+  function start() {
+    if (timerId) return;
+    // 最初の1回を即時実行、その後3秒ごと
+    showNext();
+    timerId = setInterval(showNext, 3000);
+  }
+
+  function stop() {
+    if (!timerId) return;
+    clearInterval(timerId);
+    timerId = null;
+  }
+
+  // 4) ユーザー操作に配慮（ホバー/フォーカスで一時停止、クリックで停止）
+  block.addEventListener('mouseenter', stop);
+  block.addEventListener('mouseleave', start);
+  block.addEventListener('focusin', stop);
+  block.addEventListener('focusout', start);
+
+  items.forEach((d) => {
+    const summary = d.querySelector('summary');
+    if (summary) {
+      summary.addEventListener('click', () => {
+        // ユーザーが操作したら自動切替は止める
+        stop();
+      });
     }
-
-    wireAnimatedToggle(details, summary, body);
-    row.replaceWith(details);
   });
+
+  // 5) タブ非表示時は停止、復帰したら再開
+  const onVis = () => (document.hidden ? stop() : start());
+  document.addEventListener('visibilitychange', onVis);
+
+  // 6) 起動
+  start();
 }
