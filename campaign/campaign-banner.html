@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Winter Sale Campaign</title>
+    <title>FamilyMart Winter Flash Campaign</title>
     <style>
-        /* キャンペーンコンテナのスタイル */
+        /* ファミリーマートのブランドカラーを基調としたスタイル */
         .campaign-container {
             font-family: 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #00803c 0%, #00684f 100%); /* ファミマの緑色 */
             color: #ffffff;
             padding: 40px 20px;
             border-radius: 12px;
@@ -18,11 +18,24 @@
             box-shadow: 0 10px 25px rgba(0,0,0,0.2);
         }
 
+        .campaign-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .campaign-logo {
+            width: 150px; /* ロゴ画像の幅を調整 */
+            margin-bottom: 15px;
+        }
+
         .campaign-header h2 {
             font-size: 2.5rem;
             margin-bottom: 10px;
             font-weight: 800;
             letter-spacing: 1px;
+            color: #ffffff; /* 白文字で視認性アップ */
         }
 
         .campaign-subtext {
@@ -44,6 +57,7 @@
             padding: 10px;
             border-radius: 8px;
             min-width: 70px;
+            color: #ffffff; /* タイマーの数字も白 */
         }
 
         .time-number {
@@ -60,7 +74,7 @@
         /* CTAボタン */
         .cta-button {
             display: inline-block;
-            background-color: #ffeb3b;
+            background-color: #ffeb3b; /* 明るい黄色 */
             color: #333;
             padding: 15px 40px;
             border-radius: 30px;
@@ -82,6 +96,7 @@
             .timer-box { gap: 8px; }
             .time-unit { min-width: 50px; }
             .time-number { font-size: 1.5rem; }
+            .campaign-logo { width: 120px; }
         }
     </style>
 </head>
@@ -89,8 +104,9 @@
 
     <div class="campaign-container">
         <div class="campaign-header">
-            <h2>WINTER FLASH SALE</h2>
-            <p class="campaign-subtext">全品 30% OFF - 今だけの特別価格をお見逃しなく</p>
+            <img src="https://www.family.co.jp/campaign/spot/common/img/family_logo.svg" alt="FamilyMart Logo" class="campaign-logo">
+            <h2>Winter Flash Campaign</h2>
+            <p class="campaign-subtext">この冬だけの特別セール！お得な商品を今すぐチェック！</p>
         </div>
 
         <div class="timer-box">
@@ -112,12 +128,12 @@
             </div>
         </div>
 
-        <a href="/products/sale" class="cta-button">セール会場へ行く</a>
+        <a href="https://www.family.co.jp/campaign/spot/2512_fm-grandprize.html" class="cta-button">詳細はこちら</a>
     </div>
 
 <script>
-    // 1. 終了時刻の設定 (UTCで指定すると、タイムゾーンによるズレを防げます)
-    // ここでは、JST (日本時間) の 2025年12月20日 00:00:00 を設定しています。
+    // 1. 終了時刻の設定 (JST: 2025年12月20日 00:00:00)
+    // 実際の日時に合わせて変更してください。
     const endTime = new Date('December 20, 2025 00:00:00 GMT+09:00').getTime();
 
     // DOM要素の取得
@@ -126,8 +142,11 @@
     const minutesEl = document.getElementById('minutes');
     const secondsEl = document.getElementById('seconds');
     const headerEl = document.querySelector('.campaign-header h2');
+    const subtextEl = document.querySelector('.campaign-subtext');
     const timerBoxEl = document.querySelector('.timer-box');
     const ctaButtonEl = document.querySelector('.cta-button');
+    const campaignLogoEl = document.querySelector('.campaign-logo');
+
 
     function updateCountdown() {
         const now = new Date().getTime();
@@ -150,8 +169,18 @@
             // 期限切れの処理
             clearInterval(timerInterval);
             headerEl.textContent = "キャンペーンは終了しました";
-            timerBoxEl.innerHTML = '<p>また次回のキャンペーンをお楽しみに！</p>';
+            subtextEl.textContent = "たくさんのご参加ありがとうございました！";
+            timerBoxEl.innerHTML = ''; // タイマー表示をクリア
+            campaignLogoEl.style.display = 'none'; // ロゴも非表示に
             ctaButtonEl.style.display = 'none'; // CTAボタンを非表示にする
+            
+            // 終了後に別のメッセージを表示したい場合
+            const messageEl = document.createElement('p');
+            messageEl.style.fontSize = '1.2rem';
+            messageEl.style.marginTop = '20px';
+            messageEl.textContent = 'また次回のキャンペーンをお楽しみに！';
+            timerBoxEl.parentNode.insertBefore(messageEl, timerBoxEl.nextSibling); // タイマーボックスの後に挿入
+
         }
     }
 
