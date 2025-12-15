@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Winter Sale Campaign</title>
+    <style>
+        /* キャンペーンコンテナのスタイル */
+        .campaign-container {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            padding: 40px 20px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        .campaign-header h2 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+        .campaign-subtext {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+
+        /* カウントダウンタイマー風デザイン */
+        .timer-box {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .time-unit {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px;
+            border-radius: 8px;
+            min-width: 70px;
+        }
+
+        .time-number {
+            font-size: 2rem;
+            font-weight: bold;
+            display: block;
+        }
+
+        .time-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+        }
+
+        /* CTAボタン */
+        .cta-button {
+            display: inline-block;
+            background-color: #ffeb3b;
+            color: #333;
+            padding: 15px 40px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1.1rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            background-color: #fff176;
+        }
+
+        /* レスポンシブ対応 */
+        @media (max-width: 600px) {
+            .campaign-header h2 { font-size: 1.8rem; }
+            .timer-box { gap: 8px; }
+            .time-unit { min-width: 50px; }
+            .time-number { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="campaign-container">
+        <div class="campaign-header">
+            <h2>WINTER FLASH SALE</h2>
+            <p class="campaign-subtext">全品 30% OFF - 今だけの特別価格をお見逃しなく</p>
+        </div>
+
+        <div class="timer-box">
+            <div class="time-unit">
+                <span class="time-number">02</span>
+                <span class="time-label">Days</span>
+            </div>
+            <div class="time-unit">
+                <span class="time-number">14</span>
+                <span class="time-label">Hours</span>
+            </div>
+            <div class="time-unit">
+                <span class="time-number">45</span>
+                <span class="time-label">Mins</span>
+            </div>
+        </div>
+
+        <a href="/products/sale" class="cta-button">セール会場へ行く</a>
+    </div>
+
+</body>
+</html>
