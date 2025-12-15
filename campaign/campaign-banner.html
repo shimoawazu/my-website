@@ -95,21 +95,70 @@
 
         <div class="timer-box">
             <div class="time-unit">
-                <span class="time-number">02</span>
+                <span class="time-number" id="days">00</span>
                 <span class="time-label">Days</span>
             </div>
             <div class="time-unit">
-                <span class="time-number">14</span>
+                <span class="time-number" id="hours">00</span>
                 <span class="time-label">Hours</span>
             </div>
             <div class="time-unit">
-                <span class="time-number">45</span>
+                <span class="time-number" id="minutes">00</span>
                 <span class="time-label">Mins</span>
+            </div>
+            <div class="time-unit">
+                <span class="time-number" id="seconds">00</span>
+                <span class="time-label">Secs</span>
             </div>
         </div>
 
         <a href="/products/sale" class="cta-button">セール会場へ行く</a>
     </div>
+
+<script>
+    // 1. 終了時刻の設定 (UTCで指定すると、タイムゾーンによるズレを防げます)
+    // ここでは、JST (日本時間) の 2025年12月20日 00:00:00 を設定しています。
+    const endTime = new Date('December 20, 2025 00:00:00 GMT+09:00').getTime();
+
+    // DOM要素の取得
+    const daysEl = document.getElementById('days');
+    const hoursEl = document.getElementById('hours');
+    const minutesEl = document.getElementById('minutes');
+    const secondsEl = document.getElementById('seconds');
+    const headerEl = document.querySelector('.campaign-header h2');
+    const timerBoxEl = document.querySelector('.timer-box');
+    const ctaButtonEl = document.querySelector('.cta-button');
+
+    function updateCountdown() {
+        const now = new Date().getTime();
+        const distance = endTime - now;
+
+        // 2. 時間計算
+        if (distance > 0) {
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            // 3. DOM操作 (値をHTMLに反映)
+            daysEl.textContent = String(days).padStart(2, '0');
+            hoursEl.textContent = String(hours).padStart(2, '0');
+            minutesEl.textContent = String(minutes).padStart(2, '0');
+            secondsEl.textContent = String(seconds).padStart(2, '0');
+
+        } else {
+            // 期限切れの処理
+            clearInterval(timerInterval);
+            headerEl.textContent = "キャンペーンは終了しました";
+            timerBoxEl.innerHTML = '<p>また次回のキャンペーンをお楽しみに！</p>';
+            ctaButtonEl.style.display = 'none'; // CTAボタンを非表示にする
+        }
+    }
+
+    // 4. 繰り返し処理 (1秒ごとに更新)
+    updateCountdown(); // 初回実行
+    const timerInterval = setInterval(updateCountdown, 1000);
+</script>
 
 </body>
 </html>
