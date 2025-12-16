@@ -1,56 +1,223 @@
-<div class="campaign-embedded-content" style="max-width: 800px; margin: 0 auto; padding: 20px; font-family: 'Hiragino Kaku Gothic ProN', 'ヒラギノ角ゴ ProN', Arial, sans-serif;">
-    
-    <h1 style="font-size: 2.2rem; color: #00803c; border-bottom: 3px solid #ffeb3b; padding-bottom: 10px; margin-bottom: 20px; text-align: center;">
-        ファミマのおトクが止まらない!? 1個買うと、1個もらえる
-    </h1>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Special Offers</title>
+    <style>
+        /* グローバルリセットとフォント設定 */
+        .adobe-campaign-container {
+            font-family: 'Adobe Clean', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #141414;
+            line-height: 1.5;
+        }
 
-    <div style="background-color: #f7f7f7; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-        <p style="font-weight: bold; font-size: 1.1rem; color: #333;">
-            <span style="color: #d60000; margin-right: 10px;">■</span>キャンペーン期間: 12月16日(火)から12月22日(月)まで
-        </p>
-        <p style="font-weight: bold; font-size: 1.1rem; color: #333;">
-            <span style="color: #d60000; margin-right: 10px;">■</span>引換期間: レシートに記載の期間をご確認ください
-        </p>
+        /* メインヒーローセクション */
+        .hero-banner {
+            background-color: #FA0F63; /* Adobeのアクセントカラー（ピンク/赤） */
+            color: #ffffff;
+            padding: 80px 40px;
+            text-align: center;
+            border-radius: 12px;
+            margin-bottom: 40px;
+        }
+
+        .hero-banner h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            letter-spacing: -0.5px;
+        }
+
+        .hero-banner p {
+            font-size: 1.3rem;
+            opacity: 0.9;
+            margin-bottom: 25px;
+        }
+
+        .hero-cta {
+            display: inline-block;
+            background-color: #141414;
+            color: #ffffff;
+            padding: 14px 30px;
+            border-radius: 40px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: background-color 0.2s;
+        }
+
+        .hero-cta:hover {
+            background-color: #404040;
+        }
+
+        /* 製品オファーカードセクション */
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .product-card {
+            background-color: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            transition: box-shadow 0.3s;
+        }
+
+        .product-card:hover {
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .product-card h3 {
+            font-size: 1.8rem;
+            color: #000000;
+            margin-bottom: 10px;
+        }
+
+        .product-card .price {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #FA0F63; /* アクセントカラー */
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .product-card .price small {
+            font-size: 1rem;
+            color: #666;
+            text-decoration: line-through;
+            margin-right: 10px;
+        }
+
+        .product-card ul {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 20px;
+        }
+
+        .product-card ul li {
+            padding: 5px 0;
+            border-top: 1px dashed #eee;
+            font-size: 0.95rem;
+        }
+
+        .card-cta {
+            display: block;
+            text-align: center;
+            background-color: #141414;
+            color: #ffffff;
+            padding: 10px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+
+        .card-cta:hover {
+            background-color: #404040;
+        }
+
+        /* 注意書きセクション */
+        .disclaimer {
+            margin-top: 50px;
+            padding: 20px;
+            background-color: #f8f8f8;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        /* レスポンシブ対応 */
+        @media (max-width: 768px) {
+            .hero-banner {
+                padding: 50px 20px;
+            }
+            .hero-banner h1 {
+                font-size: 2.5rem;
+            }
+            .hero-banner p {
+                font-size: 1.1rem;
+            }
+            .product-grid {
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="adobe-campaign-container">
+        
+        <div class="hero-banner">
+            <h1>Creative Cloud 全製品 40% OFF！</h1>
+            <p>期間限定特別オファー。学生・教職員の方以外も対象です。</p>
+            <a href="#offers" class="hero-cta">今すぐオファーを見る</a>
+        </div>
+
+        <a id="offers"></a>
+        <h2 style="font-size: 2rem; text-align: center; margin-bottom: 40px; color: #141414;">対象製品オファー</h2>
+
+        <div class="product-grid">
+            
+            <div class="product-card">
+                <h3>Creative Cloud<br>コンプリートプラン</h3>
+                <span class="price">
+                    <small>¥6,480/月</small>
+                    ¥3,888/月
+                </span>
+                <p style="color: #666; font-size: 0.9rem;">写真、デザイン、ビデオ編集など20以上のデスクトップアプリとモバイルアプリ。</p>
+                <ul>
+                    <li>✓ Photoshop、Illustrator、Premiere Proを含む</li>
+                    <li>✓ 100GBのクラウドストレージ</li>
+                    <li>✓ Adobe Expressプレミアム機能</li>
+                </ul>
+                <a href="https://yourdomain.com/cc-complete-offer" class="card-cta">購入する</a>
+            </div>
+
+            <div class="product-card">
+                <h3>フォトプラン<br>(Photoshop + Lightroom)</h3>
+                <span class="price">
+                    <small>¥1,980/月</small>
+                    ¥1,188/月
+                </span>
+                <p style="color: #666; font-size: 0.9rem;">写真の編集、整理、クラウドへの保存に必要なすべて。</p>
+                <ul>
+                    <li>✓ Photoshop (デスクトップ版、iPad版)</li>
+                    <li>✓ Lightroom Classic</li>
+                    <li>✓ 20GBのクラウドストレージ</li>
+                </ul>
+                <a href="https://yourdomain.com/photo-offer" class="card-cta">購入する</a>
+            </div>
+
+            <div class="product-card">
+                <h3>Illustrator<br>単体プラン</h3>
+                <span class="price">
+                    <small>¥3,280/月</small>
+                    ¥1,968/月
+                </span>
+                <p style="color: #666; font-size: 0.9rem;">業界標準のベクターグラフィックデザインソフトウェア。</p>
+                <ul>
+                    <li>✓ Illustrator (デスクトップ版、iPad版)</li>
+                    <li>✓ 100GBのクラウドストレージ</li>
+                    <li>✓ ステップバイステップのチュートリアル</li>
+                </ul>
+                <a href="https://yourdomain.com/ai-offer" class="card-cta">購入する</a>
+            </div>
+            
+        </div>
+
+        <div class="disclaimer">
+            <p>※本オファーは新規または再契約のお客様限定です。価格は税別表記です。オファーは予告なく終了する場合がございます。詳細な利用規約は各製品の購入ページでご確認ください。</p>
+        </div>
+
     </div>
 
-    <h2 style="font-size: 1.6rem; color: #00803c; margin-top: 30px; border-left: 5px solid #00803c; padding-left: 10px;">
-        今週のおトク情報
-    </h2>
-    <ul style="list-style: none; padding: 0;">
-        <li style="border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 6px; background-color: #fff;">
-            <strong style="color: #d60000; display: block; margin-bottom: 5px;">【購入対象】</strong>
-            伊藤園 お〜いお茶 濃い茶 1000ml
-            <strong style="color: #00803c; display: block; margin-top: 5px;">【引換対象】</strong>
-            伊藤園 お〜い...
-        </li>
-        <li style="border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 6px; background-color: #fff;">
-            <strong style="color: #d60000; display: block; margin-bottom: 5px;">【購入対象】</strong>
-            ダノン オイコスプロテインドリンク 高吸収タンパク質 カフェラテ風味 240ml
-            <strong style="color: #00803c; display: block; margin-top: 5px;">【引換対象】</strong>
-            ダノン...
-        </li>
-    </ul>
-
-    <p style="text-align: center; margin-top: 30px; font-weight: bold; color: #333;">
-        来週もおトク情報をチェックしてね！
-    </p>
-
-    <h2 style="font-size: 1.4rem; color: #555; margin-top: 40px;">
-        <span style="font-size: 1.8rem; margin-right: 5px;">※</span>注意事項
-    </h2>
-    <ul style="font-size: 0.9rem; color: #666; padding-left: 20px; margin-top: 10px;">
-        <li style="margin-bottom: 5px;">店舗により利用開始時間が前後する可能性がございます。</li>
-        <li style="margin-bottom: 5px;">地域・店舗によっては、一部商品を取り扱っていない場合がございます。</li>
-        <li style="margin-bottom: 5px;">パッケージのデザインが異なる場合がございます。</li>
-        <li style="margin-bottom: 5px;">対象商品は売場でご確認ください。</li>
-        <li style="margin-bottom: 5px;">無料引換券はレシートに印字されます。</li>
-        <li style="margin-bottom: 5px;">引換対象商品が複数記載されているものは、いずれか1個との交換となります。</li>
-        <li style="margin-bottom: 5px;">その他注意事項はレシートに印字される無料引換券の注釈をご確認ください。</li>
-        <li style="margin-bottom: 5px;">画像はイメージです。</li>
-    </ul>
-    
-    <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px dashed #ccc;">
-        <p style="font-weight: bold; color: #555;">実施中のその他のキャンペーンもチェック！</p>
-    </div>
-
-</div>
+</body>
+</html>

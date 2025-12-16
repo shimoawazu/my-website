@@ -60,3 +60,17 @@
   top: 4px;
   left: 7px;
 }
+
+/* iframe の高さを指定します。800pxは目安です。コンテンツの長さに合わせて調整してください。 */
+.embed iframe {
+    height: 800px; /* 例えば、これまでのキャンペーンコンテンツを全て表示できる高さに設定 */
+    width: 100%;
+    border: none;
+    display: block;
+}
+
+/* 埋め込みブロック自体にも、必要に応じて最大高さを指定できます */
+.embed {
+    max-height: 800px; /* iframeに設定した値と同じか、それ以上の値 */
+    overflow: hidden; /* スクロールバーが表示されないようにする */
+}
