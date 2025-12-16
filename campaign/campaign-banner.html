@@ -1,193 +1,54 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FamilyMart Winter Flash Campaign</title>
-    <style>
-        /* ファミリーマートのブランドカラーを基調としたスタイル */
-        .campaign-container {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #00803c 0%, #00684f 100%); /* ファミマの緑色 */
-            color: #ffffff;
-            padding: 40px 20px;
-            border-radius: 12px;
-            text-align: center;
-            max-width: 800px;
-            margin: 0 auto;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-        }
+<div class="campaign-embedded-content" style="max-width: 800px; margin: 0 auto; padding: 20px; font-family: 'Hiragino Kaku Gothic ProN', 'ヒラギノ角ゴ ProN', Arial, sans-serif;">
+    
+    <h1 style="font-size: 2.2rem; color: #00803c; border-bottom: 3px solid #ffeb3b; padding-bottom: 10px; margin-bottom: 20px; text-align: center;">
+        ファミマのおトクが止まらない!? 1個買うと、1個もらえる
+    </h1>
 
-        .campaign-header {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .campaign-logo {
-            width: 150px; /* ロゴ画像の幅を調整 */
-            margin-bottom: 15px;
-        }
-
-        .campaign-header h2 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            font-weight: 800;
-            letter-spacing: 1px;
-            color: #ffffff; /* 白文字で視認性アップ */
-        }
-
-        .campaign-subtext {
-            font-size: 1.2rem;
-            margin-bottom: 30px;
-            opacity: 0.9;
-        }
-
-        /* カウントダウンタイマー風デザイン */
-        .timer-box {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-
-        .time-unit {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 10px;
-            border-radius: 8px;
-            min-width: 70px;
-            color: #ffffff; /* タイマーの数字も白 */
-        }
-
-        .time-number {
-            font-size: 2rem;
-            font-weight: bold;
-            display: block;
-        }
-
-        .time-label {
-            font-size: 0.8rem;
-            text-transform: uppercase;
-        }
-
-        /* CTAボタン */
-        .cta-button {
-            display: inline-block;
-            background-color: #ffeb3b; /* 明るい黄色 */
-            color: #333;
-            padding: 15px 40px;
-            border-radius: 30px;
-            text-decoration: none;
-            font-weight: bold;
-            font-size: 1.1rem;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .cta-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            background-color: #fff176;
-        }
-
-        /* レスポンシブ対応 */
-        @media (max-width: 600px) {
-            .campaign-header h2 { font-size: 1.8rem; }
-            .timer-box { gap: 8px; }
-            .time-unit { min-width: 50px; }
-            .time-number { font-size: 1.5rem; }
-            .campaign-logo { width: 120px; }
-        }
-    </style>
-</head>
-<body>
-
-    <div class="campaign-container">
-        <div class="campaign-header">
-            <img src="https://www.family.co.jp/content/dam/img/logo/sp/logo_fm.png" alt="FamilyMart Logo" class="campaign-logo">
-            <h2>Winter Flash Campaign</h2>
-            <p class="campaign-subtext">この冬だけの特別セール！お得な商品を今すぐチェック！</p>
-        </div>
-
-        <div class="timer-box">
-            <div class="time-unit">
-                <span class="time-number" id="days">00</span>
-                <span class="time-label">Days</span>
-            </div>
-            <div class="time-unit">
-                <span class="time-number" id="hours">00</span>
-                <span class="time-label">Hours</span>
-            </div>
-            <div class="time-unit">
-                <span class="time-number" id="minutes">00</span>
-                <span class="time-label">Mins</span>
-            </div>
-            <div class="time-unit">
-                <span class="time-number" id="seconds">00</span>
-                <span class="time-label">Secs</span>
-            </div>
-        </div>
-
-        <a href="https://www.family.co.jp/campaign/spot/2512_fm-grandprize.html" class="cta-button">詳細はこちら</a>
+    <div style="background-color: #f7f7f7; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+        <p style="font-weight: bold; font-size: 1.1rem; color: #333;">
+            <span style="color: #d60000; margin-right: 10px;">■</span>キャンペーン期間: 12月16日(火)から12月22日(月)まで
+        </p>
+        <p style="font-weight: bold; font-size: 1.1rem; color: #333;">
+            <span style="color: #d60000; margin-right: 10px;">■</span>引換期間: レシートに記載の期間をご確認ください
+        </p>
     </div>
 
-<script>
-    // 1. 終了時刻の設定 (JST: 2025年12月20日 00:00:00)
-    // 実際の日時に合わせて変更してください。
-    const endTime = new Date('December 20, 2025 00:00:00 GMT+09:00').getTime();
+    <h2 style="font-size: 1.6rem; color: #00803c; margin-top: 30px; border-left: 5px solid #00803c; padding-left: 10px;">
+        今週のおトク情報
+    </h2>
+    <ul style="list-style: none; padding: 0;">
+        <li style="border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 6px; background-color: #fff;">
+            <strong style="color: #d60000; display: block; margin-bottom: 5px;">【購入対象】</strong>
+            伊藤園 お〜いお茶 濃い茶 1000ml
+            <strong style="color: #00803c; display: block; margin-top: 5px;">【引換対象】</strong>
+            伊藤園 お〜い...
+        </li>
+        <li style="border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 6px; background-color: #fff;">
+            <strong style="color: #d60000; display: block; margin-bottom: 5px;">【購入対象】</strong>
+            ダノン オイコスプロテインドリンク 高吸収タンパク質 カフェラテ風味 240ml
+            <strong style="color: #00803c; display: block; margin-top: 5px;">【引換対象】</strong>
+            ダノン...
+        </li>
+    </ul>
 
-    // DOM要素の取得
-    const daysEl = document.getElementById('days');
-    const hoursEl = document.getElementById('hours');
-    const minutesEl = document.getElementById('minutes');
-    const secondsEl = document.getElementById('seconds');
-    const headerEl = document.querySelector('.campaign-header h2');
-    const subtextEl = document.querySelector('.campaign-subtext');
-    const timerBoxEl = document.querySelector('.timer-box');
-    const ctaButtonEl = document.querySelector('.cta-button');
-    const campaignLogoEl = document.querySelector('.campaign-logo');
+    <p style="text-align: center; margin-top: 30px; font-weight: bold; color: #333;">
+        来週もおトク情報をチェックしてね！
+    </p>
 
-
-    function updateCountdown() {
-        const now = new Date().getTime();
-        const distance = endTime - now;
-
-        // 2. 時間計算
-        if (distance > 0) {
-            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
-            // 3. DOM操作 (値をHTMLに反映)
-            daysEl.textContent = String(days).padStart(2, '0');
-            hoursEl.textContent = String(hours).padStart(2, '0');
-            minutesEl.textContent = String(minutes).padStart(2, '0');
-            secondsEl.textContent = String(seconds).padStart(2, '0');
-
-        } else {
-            // 期限切れの処理
-            clearInterval(timerInterval);
-            headerEl.textContent = "キャンペーンは終了しました";
-            subtextEl.textContent = "たくさんのご参加ありがとうございました！";
-            timerBoxEl.innerHTML = ''; // タイマー表示をクリア
-            campaignLogoEl.style.display = 'none'; // ロゴも非表示に
-            ctaButtonEl.style.display = 'none'; // CTAボタンを非表示にする
-            
-            // 終了後に別のメッセージを表示したい場合
-            const messageEl = document.createElement('p');
-            messageEl.style.fontSize = '1.2rem';
-            messageEl.style.marginTop = '20px';
-            messageEl.textContent = 'また次回のキャンペーンをお楽しみに！';
-            timerBoxEl.parentNode.insertBefore(messageEl, timerBoxEl.nextSibling); // タイマーボックスの後に挿入
-
-        }
-    }
-
-    // 4. 繰り返し処理 (1秒ごとに更新)
-    updateCountdown(); // 初回実行
-    const timerInterval = setInterval(updateCountdown, 1000);
-</script>
-
-</body>
-</html>
+    <h2 style="font-size: 1.4rem; color: #555; margin-top: 40px;">
+        <span style="font-size: 1.8rem; margin-right: 5px;">※</span>注意事項
+    </h2>
+    <ul style="font-size: 0.9rem; color: #666; padding-left: 20px; margin-top: 10px;">
+        <li style="margin-bottom: 5px;">店舗により利用開始時間が前後する可能性がございます。</li>
+        <li style="margin-bottom: 5px;">地域・店舗によっては、一部商品を取り扱っていない場合がございます。</li>
+        <li style="margin-bottom: 5px;">パッケージのデザインが異なる場合がございます。</li>
+        <li style="margin-bottom: 5px;">対象商品は売場でご確認ください。</li>
+        <li style="margin-bottom: 5px;">無料引換券はレシートに印字されます。</li>
+        <li style="margin-bottom: 5px;">引換対象商品が複数記載されているものは、いずれか1個との交換となります。</li>
+        <li style="margin-bottom: 5px;">その他注意事項はレシートに印字される無料引換券の注釈をご確認ください。</li>
+        <li style="margin-bottom: 5px;">画像はイメージです。</li>
+    </ul>
+    
+    <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px dashed #ccc;">
+        <p style="font-weight: bold; color: #555;">実施中のその他のキャンペーンもチェック！</p>
+    </div>
