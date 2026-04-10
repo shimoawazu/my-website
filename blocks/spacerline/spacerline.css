@@ -1,0 +1,11 @@
+.spacer-line {
+  --spacer-height: 1px;          /* 線の太さ */
+  --spacer-color: #ccc;          /* 線の色 */
+  --spacer-margin: 2rem 0;       /* 上下余白 */
+
+  display: block;
+  width: 100%;
+  height: var(--spacer-height);
+  background-color: var(--spacer-color);
+  margin: var(--spacer-margin);
+}
