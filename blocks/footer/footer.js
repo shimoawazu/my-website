@@ -7,10 +7,19 @@ import { loadFragment } from '../fragment/fragment.js';
  */
 export default async function decorate(block) {
   const footerMeta = getMetadata('footer');
+  // console.log("Footer Meta:"+footerMeta);
+  // console.log("Footer Meta:"+footerMeta.footer);
+
   block.textContent = '';
 
   // load footer fragment
-  const footerPath = footerMeta.footer || '/footer';
+  //const footerPath = footerMeta.footer || '/footer';
+  //const footerPath = footerMeta || '/footer';
+
+  //const fragment = await loadFragment(footerPath);
+
+  const footerPath = footerMeta ? new URL(footerMeta).pathname : '/footer';
+  console.log("Footer Path:"+footerPath);  
   const fragment = await loadFragment(footerPath);
 
   // decorate footer DOM

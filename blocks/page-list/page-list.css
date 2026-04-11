@@ -1,0 +1,68 @@
+.page-list {
+  display: flex;
+  flex-wrap: wrap;        /* ← これがポイント */
+  gap: 24px;
+}
+
+/* カード */
+.page-card {
+  flex: 0 0 260px;        /* カード幅 */
+  max-width: 100%;
+  display: block;
+  overflow: hidden;
+  background: #fff;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 4px 12px rgba(0,0,0,.08);
+}
+
+.page-card-image img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  display: block;
+}
+
+.page-card-body {
+  padding: 16px;
+}
+
+.page-card-body h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.page-card-body p {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+}
+
+/* 予告 badge */
+.page-card-image {
+  position: relative;
+}
+
+.campaign-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 1;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 999px;
+  color: #fff;
+}
+
+.campaign-badge--active {
+  background: #e60012; /* 赤 */
+}
+
+.campaign-badge--upcoming {
+  background: #555; /* グレー */
+}
+
+.campaign-badge--ended {
+  background: #999; /* 薄グレー */
+}

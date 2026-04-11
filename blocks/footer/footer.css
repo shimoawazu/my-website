@@ -12,3 +12,29 @@ footer .footer {
 footer .footer p {
   margin: 0;
 }
+
+
+footer .default-content-wrapper > ul {
+  display: flex;
+  justify-content: space-around;
+}
+@media (width < 600px) {
+  footer .default-content-wrapper > ul {
+    flex-direction: column;
+  }
+}
+body > footer > div > div > div > div > ul > li > ul > li {
+  font-weight: 800;
+  margin-top: 40px;
+}
+body > footer > div > div > div > div > ul > li > ul > li > ul {
+  font-weight: 500;
+  font-size: small;
+  line-height: 2.2;
+}
+
+footer .default-content-wrapper ul {
+  flex: 1;
+  padding: 0px;
+  list-style: none;
+}
